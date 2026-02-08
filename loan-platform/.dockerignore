@@ -1,0 +1,14 @@
+# Ignore everything
+*
+
+# Include only what's needed
+!src/
+!pom.xml
+!mvnw
+!.mvn/
+
+# Exclude build artifacts
+src/**/target/
+*.class
+*.jar
+*.war

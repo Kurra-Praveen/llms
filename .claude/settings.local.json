@@ -1,0 +1,25 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(chmod:*)",
+      "Bash(mvn compile:*)",
+      "Bash(mvn clean compile:*)",
+      "Bash(timeout 30 mvn spring-boot:run:*)",
+      "Bash(mvn test-compile:*)",
+      "Bash(mvn test:*)",
+      "Bash(npm create vite:*)",
+      "Bash(npm install)",
+      "Bash(npm install:*)",
+      "Bash(npx tailwindcss init:*)",
+      "Bash(bash -c \"cd /home/praveen/leaarning/ai/llms && rm -rf loan-platform/frontend && ls -la\")",
+      "Bash(bash -l -c:*)",
+      "Bash(exec bash)",
+      "Bash(:)",
+      "Bash(./node_modules/.bin/tailwindcss init:*)",
+      "Bash(npm run build:*)",
+      "Bash(npx tsc:*)",
+      "Bash(timeout 15 npm run dev:*)",
+      "Bash(./mvnw compile:*)"
+    ]
+  }
+}

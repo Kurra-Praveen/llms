@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3:*)",
+      "Bash(jshell:*)",
+      "Bash(mvn test-compile exec:java:*)"
+    ]
+  }
+}
