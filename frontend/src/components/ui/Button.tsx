@@ -8,7 +8,7 @@ import { logger } from '@/utils/logger';
 
 const buttonLogger = logger.scope('Button');
 
-type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'ghost' | 'outline';
+type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'ghost' | 'outline' | 'success';
 type ButtonSize = 'sm' | 'md' | 'lg';
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
@@ -27,6 +27,8 @@ const variantClasses: Record<ButtonVariant, string> = {
     'bg-gray-100 text-gray-700 hover:bg-gray-200 focus:ring-gray-500 disabled:bg-gray-50 disabled:text-gray-400',
   danger:
     'bg-red-600 text-white hover:bg-red-700 focus:ring-red-500 disabled:bg-red-300',
+  success:
+    'bg-green-600 text-white hover:bg-green-700 focus:ring-green-500 disabled:bg-green-300',
   ghost:
     'bg-transparent text-gray-700 hover:bg-gray-100 focus:ring-gray-500',
   outline:

@@ -160,7 +160,6 @@ export function LoanDetailsPage() {
               </Button>
               <Button
                 variant="success"
-                className="bg-green-600 hover:bg-green-700 text-white"
                 leftIcon={<CheckCircleIcon className="h-4 w-4" />}
                 onClick={() => setShowActionModal('approve')}
               >
@@ -361,7 +360,7 @@ export function LoanDetailsPage() {
                </div>
                <div>
                  <div className="text-sm font-medium text-gray-500 mb-1">Total Outstanding</div>
-                 <div className="text-2xl font-bold text-primary-600">₹{loan.totalOutstanding.toLocaleString()}</div>
+                 <div className="text-2xl font-bold text-primary-600">₹{(loan.totalOutstanding ?? 0).toLocaleString()}</div>
                </div>
 
                <div className="border-t border-gray-100 my-2"></div>

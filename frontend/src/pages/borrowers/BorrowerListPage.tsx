@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
@@ -6,21 +6,55 @@ import {
   MagnifyingGlassIcon,
   FunnelIcon,
 } from '@heroicons/react/24/outline';
-import { Button, Input, Table, Pagination, StatusBadge } from '@/components/ui';
+import { Button, Input, Table, Pagination, StatusBadge, FilterDialog, countActiveFilters } from '@/components/ui';
+import type { FilterField } from '@/components/ui';
 import { borrowerService } from '@/services/borrowerService';
 import type { Borrower } from '@/types';
 import { logger } from '@/utils/logger';
 
 const pageLogger = logger.scope('BorrowerListPage');
 
+const filterFields: FilterField[] = [
+  {
+    key: 'status',
+    label: 'Status',
+    type: 'select',
+    options: [
+      { value: 'ACTIVE', label: 'Active' },
+      { value: 'INACTIVE', label: 'Inactive' },
+      { value: 'BLOCKED', label: 'Blocked' },
+      { value: 'BLACKLISTED', label: 'Blacklisted' },
+    ],
+  },
+  {
+    key: 'riskBand',
+    label: 'Risk Band',
+    type: 'select',
+    options: [
+      { value: 'LOW', label: 'Low Risk' },
+      { value: 'MEDIUM', label: 'Medium Risk' },
+      { value: 'HIGH', label: 'High Risk' },
+      { value: 'VERY_HIGH', label: 'Very High Risk' },
+      { value: 'UNRATED', label: 'Unrated' },
+    ],
+  },
+  {
+    key: 'createdDate',
+    label: 'Created Date',
+    type: 'dateRange',
+  },
+];
+
 export function BorrowerListPage() {
   const navigate = useNavigate();
   const [page, setPage] = useState(0);
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [showFilters, setShowFilters] = useState(false);
+  const [filters, setFilters] = useState<Record<string, any>>({});
 
   // Debounce search
-  React.useEffect(() => {
+  useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(search);
       setPage(0); // Reset to first page on search
@@ -28,18 +62,36 @@ export function BorrowerListPage() {
     return () => clearTimeout(timer);
   }, [search]);
 
-  const { data, isLoading, error } = useQuery({
-    queryKey: ['borrowers', page, debouncedSearch],
-    queryFn: () =>
-      debouncedSearch
-        ? borrowerService.search(debouncedSearch, page)
-        : borrowerService.getAll({ page }),
+  const { data, isLoading } = useQuery({
+    queryKey: ['borrowers', page, debouncedSearch, filters],
+    queryFn: () => {
+      if (debouncedSearch) {
+        return borrowerService.search(debouncedSearch, page);
+      }
+      // Apply filters if set
+      if (filters.status) {
+        return borrowerService.getByStatus(filters.status, page);
+      }
+      return borrowerService.getAll({ page });
+    },
   });
 
   const handleRowClick = (borrower: Borrower) => {
     pageLogger.debug('Row clicked', { id: borrower.id });
     navigate(`/borrowers/${borrower.id}`);
   };
+
+  const handleApplyFilters = (newFilters: Record<string, any>) => {
+    setFilters(newFilters);
+    setPage(0);
+  };
+
+  const handleClearFilters = () => {
+    setFilters({});
+    setPage(0);
+  };
+
+  const activeFilterCount = countActiveFilters(filters);
 
   return (
     <div className="space-y-6">
@@ -68,8 +120,17 @@ export function BorrowerListPage() {
               leftIcon={<MagnifyingGlassIcon className="h-5 w-5" />}
             />
           </div>
-          <Button variant="outline" leftIcon={<FunnelIcon className="h-5 w-5" />}>
+          <Button
+            variant="outline"
+            leftIcon={<FunnelIcon className="h-5 w-5" />}
+            onClick={() => setShowFilters(true)}
+          >
             Filters
+            {activeFilterCount > 0 && (
+              <span className="ml-2 bg-primary-100 text-primary-700 px-2 py-0.5 rounded-full text-xs font-medium">
+                {activeFilterCount}
+              </span>
+            )}
           </Button>
         </div>
       </div>
@@ -144,6 +205,17 @@ export function BorrowerListPage() {
           />
         )}
       </div>
+
+      {showFilters && (
+        <FilterDialog
+          title="Filter Borrowers"
+          fields={filterFields}
+          values={filters}
+          onApply={handleApplyFilters}
+          onClose={() => setShowFilters(false)}
+          onClear={handleClearFilters}
+        />
+      )}
     </div>
   );
 }

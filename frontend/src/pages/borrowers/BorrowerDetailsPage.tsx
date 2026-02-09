@@ -1,24 +1,19 @@
-import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
   ArrowLeftIcon,
   PencilIcon,
-  TrashIcon,
   NoSymbolIcon,
   CheckCircleIcon
 } from '@heroicons/react/24/outline';
 import { Button, Card, CardHeader, StatusBadge, Spinner, Badge } from '@/components/ui';
 import { borrowerService } from '@/services/borrowerService';
-import { logger } from '@/utils/logger';
-
-const detailsLogger = logger.scope('BorrowerDetailsPage');
 
 export function BorrowerDetailsPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
-  const { data: borrower, isLoading, error } = useQuery({
+  const { data: borrower, isLoading } = useQuery({
     queryKey: ['borrower', id],
     queryFn: () => borrowerService.getById(id!),
     enabled: !!id,
@@ -28,7 +23,7 @@ export function BorrowerDetailsPage() {
     return <Spinner fullScreen text="Loading borrower details..." />;
   }
 
-  if (error || !borrower) {
+  if (!borrower) {
     return (
       <div className="text-center py-12">
         <h2 className="text-2xl font-bold text-gray-900">Error</h2>

@@ -42,6 +42,26 @@ export interface LoansByStatus {
   amount: number;
 }
 
+export interface AgingBucket {
+  bucket: string;
+  label: string;
+  minDpd: number;
+  maxDpd: number | null;
+  loansCount: number;
+  outstandingPrincipal: number;
+  outstandingInterest: number;
+  outstandingPenalty: number;
+  totalOutstanding: number;
+  percentageOfPortfolio: number;
+}
+
+export interface AgingReport {
+  buckets: AgingBucket[];
+  totalLoans: number;
+  totalOutstanding: number;
+  generatedAt: string;
+}
+
 // Helper to calculate date ranges
 function getDateRange(period: string): { startDate: string; endDate: string } {
   const now = new Date();
@@ -314,6 +334,100 @@ export const reportService = {
       return result;
     } catch (error) {
       reportLogger.error('Failed to fetch loans by status', { error });
+      throw error;
+    }
+  },
+
+  /**
+   * Get aging report - loans grouped by DPD buckets
+   */
+  async getAgingReport(): Promise<AgingReport> {
+    reportLogger.info('Fetching aging report');
+
+    try {
+      // Fetch active loans
+      const response = await api.get<PagedResponse<Loan>>('/v1/loans/status/ACTIVE', {
+        params: { page: 0, size: 500 }
+      });
+
+      const loans = response.data.data.content || [];
+
+      // Define aging buckets
+      const bucketDefinitions = [
+        { bucket: 'CURRENT', label: 'Current (0 DPD)', minDpd: 0, maxDpd: 0 },
+        { bucket: '1-30', label: '1-30 Days', minDpd: 1, maxDpd: 30 },
+        { bucket: '31-60', label: '31-60 Days', minDpd: 31, maxDpd: 60 },
+        { bucket: '61-90', label: '61-90 Days', minDpd: 61, maxDpd: 90 },
+        { bucket: '90+', label: '90+ Days (NPA)', minDpd: 91, maxDpd: null },
+      ];
+
+      // Initialize bucket data
+      const bucketData: Map<string, AgingBucket> = new Map();
+      bucketDefinitions.forEach(def => {
+        bucketData.set(def.bucket, {
+          bucket: def.bucket,
+          label: def.label,
+          minDpd: def.minDpd,
+          maxDpd: def.maxDpd,
+          loansCount: 0,
+          outstandingPrincipal: 0,
+          outstandingInterest: 0,
+          outstandingPenalty: 0,
+          totalOutstanding: 0,
+          percentageOfPortfolio: 0,
+        });
+      });
+
+      let totalOutstanding = 0;
+
+      // Categorize loans into buckets
+      loans.forEach((loan: Loan) => {
+        const dpd = loan.dpd || 0;
+        let bucketKey = 'CURRENT';
+
+        if (dpd >= 91) bucketKey = '90+';
+        else if (dpd >= 61) bucketKey = '61-90';
+        else if (dpd >= 31) bucketKey = '31-60';
+        else if (dpd >= 1) bucketKey = '1-30';
+
+        const bucket = bucketData.get(bucketKey)!;
+        bucket.loansCount++;
+        bucket.outstandingPrincipal += loan.outstandingPrincipal || 0;
+        bucket.outstandingInterest += loan.outstandingInterest || 0;
+        bucket.outstandingPenalty += loan.outstandingPenalty || 0;
+        bucket.totalOutstanding +=
+          (loan.outstandingPrincipal || 0) +
+          (loan.outstandingInterest || 0) +
+          (loan.outstandingPenalty || 0);
+
+        totalOutstanding +=
+          (loan.outstandingPrincipal || 0) +
+          (loan.outstandingInterest || 0) +
+          (loan.outstandingPenalty || 0);
+      });
+
+      // Calculate percentages
+      bucketData.forEach(bucket => {
+        bucket.percentageOfPortfolio = totalOutstanding > 0
+          ? Math.round((bucket.totalOutstanding / totalOutstanding) * 100 * 10) / 10
+          : 0;
+      });
+
+      const report: AgingReport = {
+        buckets: Array.from(bucketData.values()),
+        totalLoans: loans.length,
+        totalOutstanding,
+        generatedAt: new Date().toISOString(),
+      };
+
+      reportLogger.info('Aging report generated', {
+        totalLoans: report.totalLoans,
+        totalOutstanding: report.totalOutstanding,
+      });
+
+      return report;
+    } catch (error) {
+      reportLogger.error('Failed to fetch aging report', { error });
       throw error;
     }
   },

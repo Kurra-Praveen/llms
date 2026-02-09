@@ -54,6 +54,26 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.success(user));
     }
 
+    @PutMapping("/profile")
+    @Operation(summary = "Update current user profile")
+    public ResponseEntity<ApiResponse<UserResponse>> updateProfile(
+            @Valid @RequestBody UpdateProfileRequest request,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        log.info("Profile update request for user: {}", principal.getId());
+        UserResponse user = authService.updateProfile(principal.getId(), request);
+        return ResponseEntity.ok(ApiResponse.success(user, "Profile updated successfully"));
+    }
+
+    @PutMapping("/password")
+    @Operation(summary = "Change current user password")
+    public ResponseEntity<ApiResponse<Void>> changePassword(
+            @Valid @RequestBody ChangePasswordRequest request,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        log.info("Password change request for user: {}", principal.getId());
+        authService.changePassword(principal.getId(), request);
+        return ResponseEntity.ok(ApiResponse.success(null, "Password changed successfully"));
+    }
+
     @PostMapping("/users")
     @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('LENDER_ADMIN')")
     @Operation(summary = "Create a new user")

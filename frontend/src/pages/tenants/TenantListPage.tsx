@@ -1,15 +1,12 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   PlusIcon,
   BuildingOfficeIcon,
 } from '@heroicons/react/24/outline';
-import { Button, Table, Pagination, StatusBadge, Spinner } from '@/components/ui';
+import { Button, Table, Pagination, StatusBadge } from '@/components/ui';
 import { tenantService } from '@/services/tenantService';
-import { logger } from '@/utils/logger';
-
-const pageLogger = logger.scope('TenantListPage');
 
 export function TenantListPage() {
   const navigate = useNavigate();

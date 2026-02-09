@@ -1,4 +1,4 @@
-import React from 'react';
+import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -30,7 +30,7 @@ export function PaymentForm() {
     setValue,
     formState: { errors, isSubmitting },
   } = useForm<PaymentFormData>({
-    resolver: zodResolver(paymentSchema),
+    resolver: zodResolver(paymentSchema) as any,
     defaultValues: {
       loanId: preselectedLoanId || '',
       amount: 0,
@@ -40,7 +40,7 @@ export function PaymentForm() {
   });
 
   // Update loanId if URL param changes or loan is fetched
-  React.useEffect(() => {
+  useEffect(() => {
     if (preselectedLoanId) {
       setValue('loanId', preselectedLoanId);
     }
@@ -97,7 +97,7 @@ export function PaymentForm() {
                       <span className="text-blue-700">Loan No:</span> <span className="font-medium text-blue-900">{loan.loanNumber}</span>
                   </div>
                   <div>
-                      <span className="text-blue-700">Total Outstanding:</span> <span className="font-bold text-blue-900">₹{loan.totalOutstanding.toLocaleString()}</span>
+                      <span className="text-blue-700">Total Outstanding:</span> <span className="font-bold text-blue-900">₹{(loan.totalOutstanding ?? 0).toLocaleString()}</span>
                   </div>
                    <div>
                       <span className="text-blue-700">Overdue:</span> <span className="font-medium text-red-700">₹{(loan.outstandingPenalty + loan.outstandingInterest).toLocaleString()}</span>

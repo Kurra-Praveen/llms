@@ -1,4 +1,3 @@
-import React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useNavigate } from 'react-router-dom';
@@ -25,7 +24,7 @@ export function BorrowerForm({ initialData, isEdit = false }: BorrowerFormProps)
     handleSubmit,
     formState: { errors, isSubmitting },
   } = useForm<BorrowerFormData>({
-    resolver: zodResolver(borrowerSchema),
+    resolver: zodResolver(borrowerSchema) as any,
     defaultValues: {
       fullName: initialData?.fullName || '',
       email: initialData?.email || '',

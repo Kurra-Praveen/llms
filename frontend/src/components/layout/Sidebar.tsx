@@ -12,6 +12,7 @@ import {
   Cog6ToothIcon,
   BuildingOfficeIcon,
   ChartBarIcon,
+  ClipboardDocumentListIcon,
 } from '@heroicons/react/24/outline';
 import { useAuth } from '@/contexts/AuthContext';
 import { logger } from '@/utils/logger';
@@ -30,6 +31,7 @@ const navigation: NavItem[] = [
   { name: 'Borrowers', href: '/borrowers', icon: UsersIcon },
   { name: 'Loans', href: '/loans', icon: BanknotesIcon },
   { name: 'Payments', href: '/payments', icon: CreditCardIcon },
+  { name: 'Collections', href: '/collections', icon: ClipboardDocumentListIcon },
   { name: 'Reports', href: '/reports', icon: ChartBarIcon },
   {
     name: 'Tenants',

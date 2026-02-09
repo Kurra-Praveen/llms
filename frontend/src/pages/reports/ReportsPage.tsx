@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import {
-  DocumentTextIcon,
   ArrowDownTrayIcon
 } from '@heroicons/react/24/outline';
 import { Button } from '@/components/ui';
 import { PortfolioReport } from './PortfolioReport';
 import { CollectionReport } from './CollectionReport';
+import { AgingReport } from './AgingReport';
 
 type ReportTab = 'portfolio' | 'collections' | 'aging';
 
@@ -72,13 +72,7 @@ export function ReportsPage() {
       <div className="min-h-[400px]">
         {activeTab === 'portfolio' && <PortfolioReport />}
         {activeTab === 'collections' && <CollectionReport />}
-        {activeTab === 'aging' && (
-          <div className="text-center py-12 text-gray-500 bg-white rounded-lg border border-gray-200">
-            <DocumentTextIcon className="h-12 w-12 mx-auto text-gray-300 mb-3" />
-            <h3 className="text-lg font-medium text-gray-900">Aging Report</h3>
-            <p className="mt-1">Detailed aging analysis coming soon.</p>
-          </div>
-        )}
+        {activeTab === 'aging' && <AgingReport />}
       </div>
     </div>
   );

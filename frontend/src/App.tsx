@@ -5,6 +5,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from '@/contexts/AuthContext';
+import { ToastProvider } from '@/contexts/ToastContext';
 import { MainLayout } from '@/components/layout';
 import { LoginPage } from '@/pages/auth/LoginPage';
 import { DashboardPage } from '@/pages/dashboard/DashboardPage';
@@ -15,6 +16,7 @@ import {
   EditBorrowerPage,
 } from '@/pages/borrowers';
 import { PaymentListPage, RecordPaymentPage } from '@/pages/payments';
+import { PaymentDetailsPage } from '@/pages/payments/PaymentDetailsPage';
 import { ReportsPage } from '@/pages/reports';
 import { SettingsPage } from '@/pages/settings';
 import { TenantListPage, TenantOnboardingPage } from '@/pages/tenants';
@@ -40,6 +42,7 @@ appLogger.info('App initializing', {
 
 import { LoanListPage, LoanDetailsPage } from '@/pages/loans';
 import { LoanForm } from '@/components/forms/LoanForm';
+import { CollectionListPage, CollectionDetailsPage } from '@/pages/collections';
 
 function NotFoundPage() {
   appLogger.warn('404 - Page not found');
@@ -65,37 +68,42 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
-        <AuthProvider>
-          <Routes>
-            {/* Public routes */}
-            <Route path="/login" element={<LoginPage />} />
+        <ToastProvider>
+          <AuthProvider>
+            <Routes>
+              {/* Public routes */}
+              <Route path="/login" element={<LoginPage />} />
 
-            {/* Protected routes with layout */}
-            <Route element={<MainLayout />}>
-              <Route path="/dashboard" element={<DashboardPage />} />
-              <Route path="/borrowers" element={<BorrowerListPage />} />
-              <Route path="/borrowers/new" element={<AddBorrowerPage />} />
-              <Route path="/borrowers/:id" element={<BorrowerDetailsPage />} />
-              <Route path="/borrowers/:id/edit" element={<EditBorrowerPage />} />
+              {/* Protected routes with layout */}
+              <Route element={<MainLayout />}>
+                <Route path="/dashboard" element={<DashboardPage />} />
+                <Route path="/borrowers" element={<BorrowerListPage />} />
+                <Route path="/borrowers/new" element={<AddBorrowerPage />} />
+                <Route path="/borrowers/:id" element={<BorrowerDetailsPage />} />
+                <Route path="/borrowers/:id/edit" element={<EditBorrowerPage />} />
 
-              <Route path="/loans" element={<LoanListPage />} />
-              <Route path="/loans/new" element={<LoanForm />} />
-              <Route path="/loans/:id" element={<LoanDetailsPage />} />
-              <Route path="/payments" element={<PaymentListPage />} />
-              <Route path="/payments/new" element={<RecordPaymentPage />} />
-              <Route path="/reports" element={<ReportsPage />} />
-              <Route path="/tenants" element={<TenantListPage />} />
-              <Route path="/tenants/new" element={<TenantOnboardingPage />} />
-              <Route path="/settings" element={<SettingsPage />} />
-            </Route>
+                <Route path="/loans" element={<LoanListPage />} />
+                <Route path="/loans/new" element={<LoanForm />} />
+                <Route path="/loans/:id" element={<LoanDetailsPage />} />
+                <Route path="/payments" element={<PaymentListPage />} />
+                <Route path="/payments/new" element={<RecordPaymentPage />} />
+                <Route path="/payments/:id" element={<PaymentDetailsPage />} />
+                <Route path="/collections" element={<CollectionListPage />} />
+                <Route path="/collections/:id" element={<CollectionDetailsPage />} />
+                <Route path="/reports" element={<ReportsPage />} />
+                <Route path="/tenants" element={<TenantListPage />} />
+                <Route path="/tenants/new" element={<TenantOnboardingPage />} />
+                <Route path="/settings" element={<SettingsPage />} />
+              </Route>
 
-            {/* Redirect root to dashboard */}
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+              {/* Redirect root to dashboard */}
+              <Route path="/" element={<Navigate to="/dashboard" replace />} />
 
-            {/* 404 */}
-            <Route path="*" element={<NotFoundPage />} />
-          </Routes>
-        </AuthProvider>
+              {/* 404 */}
+              <Route path="*" element={<NotFoundPage />} />
+            </Routes>
+          </AuthProvider>
+        </ToastProvider>
       </BrowserRouter>
     </QueryClientProvider>
   );

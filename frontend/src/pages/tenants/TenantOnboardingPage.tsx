@@ -1,4 +1,3 @@
-import React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -6,10 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button, Input, Card } from '@/components/ui';
 import { tenantService } from '@/services/tenantService';
-import { logger } from '@/utils/logger';
 import type { CreateTenantRequest } from '@/types';
-
-const formLogger = logger.scope('TenantForm');
 
 const tenantSchema = z.object({
   businessName: z.string().min(2, 'Business name required'),
@@ -44,11 +40,10 @@ export function TenantOnboardingPage() {
   const mutation = useMutation({
     mutationFn: (data: TenantFormData) => tenantService.create(data as CreateTenantRequest),
     onSuccess: () => {
-      formLogger.info('Tenant created');
       queryClient.invalidateQueries({ queryKey: ['tenants'] });
       navigate('/tenants');
     },
-    onError: (error) => {
+    onError: () => {
       alert('Failed to create tenant. check logs.');
     }
   });

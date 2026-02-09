@@ -19,7 +19,11 @@
       "Bash(npm run build:*)",
       "Bash(npx tsc:*)",
       "Bash(timeout 15 npm run dev:*)",
-      "Bash(./mvnw compile:*)"
+      "Bash(./mvnw compile:*)",
+      "Bash(find:*)",
+      "Bash(wc:*)",
+      "Bash(curl:*)",
+      "Bash(pkill:*)"
     ]
   }
 }

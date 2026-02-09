@@ -329,3 +329,85 @@ export interface DashboardSummary {
   paymentsToday: number;
   collectionToday: number;
 }
+
+// Collection types
+export type CollectionStatus = 'OPEN' | 'IN_PROGRESS' | 'RESOLVED' | 'ESCALATED' | 'ON_HOLD';
+export type CollectionPriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+export type ActivityType =
+  | 'CALL_ATTEMPTED'
+  | 'CALL_CONNECTED'
+  | 'SMS_SENT'
+  | 'EMAIL_SENT'
+  | 'FIELD_VISIT'
+  | 'PTP_RECORDED'
+  | 'PTP_BROKEN'
+  | 'PAYMENT_RECEIVED'
+  | 'ESCALATION'
+  | 'STATUS_CHANGE'
+  | 'NOTE_ADDED'
+  | 'DISPUTE_RAISED'
+  | 'SETTLEMENT_OFFERED';
+export type ContactMethod = 'PHONE' | 'SMS' | 'EMAIL' | 'WHATSAPP' | 'FIELD_VISIT' | 'LETTER';
+
+export interface CollectionCase {
+  id: string;
+  tenantId: string;
+  loanId: string;
+  loanNumber?: string;
+  borrowerName?: string;
+  borrowerPhone?: string;
+  caseNumber: string;
+  dpdBucket: string;
+  dpdDays: number;
+  overdueAmount: number;
+  overduePrincipal: number;
+  overdueInterest: number;
+  overduePenalty: number;
+  assignedTo?: string;
+  assignedToName?: string;
+  assignedAt?: string;
+  status: CollectionStatus;
+  priority: CollectionPriority;
+  resolutionType?: string;
+  resolvedAt?: string;
+  resolvedBy?: string;
+  resolvedByName?: string;
+  resolutionNotes?: string;
+  ptpDate?: string;
+  ptpAmount?: number;
+  ptpStatus?: string;
+  lastContactDate?: string;
+  nextActionDate?: string;
+  nextAction?: string;
+  activities?: CollectionActivity[];
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface CollectionActivity {
+  id: string;
+  collectionCaseId: string;
+  activityType: ActivityType;
+  activityDate: string;
+  contactMethod?: ContactMethod;
+  contactResult?: string;
+  notes?: string;
+  ptpDate?: string;
+  ptpAmount?: number;
+  nextActionDate?: string;
+  nextAction?: string;
+  createdBy: string;
+  createdByName?: string;
+  createdAt: string;
+}
+
+export interface CreateCollectionActivityRequest {
+  activityType: ActivityType;
+  contactMethod?: ContactMethod;
+  contactResult?: string;
+  notes?: string;
+  ptpDate?: string;
+  ptpAmount?: number;
+  nextActionDate?: string;
+  nextAction?: string;
+}

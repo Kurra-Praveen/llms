@@ -1,9 +1,11 @@
-import React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { useMutation } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button, Input, Card, CardHeader } from '@/components/ui';
+import { authService } from '@/services/authService';
+import { useToast } from '@/contexts/ToastContext';
 import { logger } from '@/utils/logger';
 
 const settingsLogger = logger.scope('SettingsPage');
@@ -11,7 +13,7 @@ const settingsLogger = logger.scope('SettingsPage');
 const profileSchema = z.object({
   firstName: z.string().min(2, 'First name is required'),
   lastName: z.string().min(2, 'Last name is required'),
-  email: z.string().email().readonly(),
+  email: z.string().email(),
   phone: z.string().optional(),
 });
 
@@ -29,7 +31,8 @@ const passwordSchema = z.object({
 type PasswordFormData = z.infer<typeof passwordSchema>;
 
 export function SettingsPage() {
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
+  const { showToast } = useToast();
 
   const {
     register: registerProfile,
@@ -54,19 +57,47 @@ export function SettingsPage() {
     resolver: zodResolver(passwordSchema),
   });
 
+  const profileMutation = useMutation({
+    mutationFn: (data: { firstName: string; lastName: string; phone?: string }) =>
+      authService.updateProfile(data),
+    onSuccess: () => {
+      showToast('Profile updated successfully', 'success');
+      refreshUser?.();
+    },
+    onError: (error: Error) => {
+      settingsLogger.error('Profile update failed', { error });
+      showToast(error.message || 'Failed to update profile', 'error');
+    },
+  });
+
+  const passwordMutation = useMutation({
+    mutationFn: (data: { currentPassword: string; newPassword: string }) =>
+      authService.changePassword(data),
+    onSuccess: () => {
+      showToast('Password changed successfully', 'success');
+      resetPassword();
+    },
+    onError: (error: Error) => {
+      settingsLogger.error('Password change failed', { error });
+      showToast(error.message || 'Failed to change password', 'error');
+    },
+  });
+
   const onProfileSubmit = async (data: ProfileFormData) => {
     settingsLogger.info('Updating profile', data);
-    // TODO: Implement API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    alert('Profile updated successfully (Mock)');
+    profileMutation.mutate({
+      firstName: data.firstName,
+      lastName: data.lastName,
+      phone: data.phone,
+    });
   };
 
   const onPasswordSubmit = async (data: PasswordFormData) => {
     settingsLogger.info('Updating password');
-    // TODO: Implement API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    alert('Password updated successfully (Mock)');
-    resetPassword();
+    passwordMutation.mutate({
+      currentPassword: data.currentPassword,
+      newPassword: data.newPassword,
+    });
   };
 
   return (
@@ -105,7 +136,7 @@ export function SettingsPage() {
             />
           </div>
           <div className="flex justify-end">
-            <Button type="submit" isLoading={isProfileSubmitting}>
+            <Button type="submit" isLoading={isProfileSubmitting || profileMutation.isPending}>
               Save Profile
             </Button>
           </div>
@@ -135,7 +166,7 @@ export function SettingsPage() {
             error={passwordErrors.confirmPassword?.message}
           />
           <div className="flex justify-end">
-            <Button variant="secondary" type="submit" isLoading={isPasswordSubmitting}>
+            <Button variant="secondary" type="submit" isLoading={isPasswordSubmitting || passwordMutation.isPending}>
               Change Password
             </Button>
           </div>

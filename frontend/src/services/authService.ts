@@ -124,6 +124,44 @@ export const authService = {
     }
     return null;
   },
+
+  /**
+   * Update user profile
+   */
+  async updateProfile(data: { firstName: string; lastName: string; phone?: string }): Promise<User> {
+    authLogger.info('Updating profile', { firstName: data.firstName, lastName: data.lastName });
+
+    const response = await api.put<ApiResponse<User>>('/v1/auth/profile', data);
+
+    if (response.data.success) {
+      // Update stored user
+      const storedUser = this.getStoredUser();
+      if (storedUser) {
+        const updatedUser = { ...storedUser, ...response.data.data };
+        localStorage.setItem('user', JSON.stringify(updatedUser));
+      }
+      authLogger.info('Profile updated successfully');
+      return response.data.data;
+    }
+
+    throw new Error(response.data.message || 'Failed to update profile');
+  },
+
+  /**
+   * Change password
+   */
+  async changePassword(data: { currentPassword: string; newPassword: string }): Promise<void> {
+    authLogger.info('Changing password');
+
+    const response = await api.put<ApiResponse<null>>('/v1/auth/password', data);
+
+    if (response.data.success) {
+      authLogger.info('Password changed successfully');
+      return;
+    }
+
+    throw new Error(response.data.message || 'Failed to change password');
+  },
 };
 
 export default authService;

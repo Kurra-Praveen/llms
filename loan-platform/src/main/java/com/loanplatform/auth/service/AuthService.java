@@ -159,6 +159,49 @@ public class AuthService {
         return mapToUserResponse(user);
     }
 
+    @Transactional
+    public UserResponse updateProfile(UUID userId, UpdateProfileRequest request) {
+        log.info("Updating profile for user: {}", userId);
+
+        User user = userRepository.findById(userId)
+                .filter(u -> !u.isDeleted())
+                .orElseThrow(() -> new ResourceNotFoundException("User", userId));
+
+        user.setFirstName(request.getFirstName());
+        user.setLastName(request.getLastName());
+        if (request.getPhone() != null) {
+            user.setPhone(request.getPhone());
+        }
+
+        user = userRepository.save(user);
+        log.info("Profile updated for user: {}", userId);
+
+        return mapToUserResponse(user);
+    }
+
+    @Transactional
+    public void changePassword(UUID userId, ChangePasswordRequest request) {
+        log.info("Changing password for user: {}", userId);
+
+        User user = userRepository.findById(userId)
+                .filter(u -> !u.isDeleted())
+                .orElseThrow(() -> new ResourceNotFoundException("User", userId));
+
+        // Verify current password
+        if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPasswordHash())) {
+            throw new BusinessException("Current password is incorrect", HttpStatus.BAD_REQUEST, "INVALID_PASSWORD");
+        }
+
+        // Update password
+        user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
+        userRepository.save(user);
+
+        // Revoke all refresh tokens for security
+        refreshTokenRepository.revokeAllByUserId(userId, Instant.now());
+
+        log.info("Password changed for user: {}", userId);
+    }
+
     private void saveRefreshToken(User user, String refreshToken) {
         RefreshToken token = RefreshToken.builder()
                 .userId(user.getId())

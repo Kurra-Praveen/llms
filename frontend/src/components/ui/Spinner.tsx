@@ -7,6 +7,8 @@ import React from 'react';
 interface SpinnerProps {
   size?: 'sm' | 'md' | 'lg' | 'xl';
   className?: string;
+  fullScreen?: boolean;
+  text?: string;
 }
 
 const sizeClasses = {
@@ -16,8 +18,8 @@ const sizeClasses = {
   xl: 'h-12 w-12 border-3',
 };
 
-export function Spinner({ size = 'md', className = '' }: SpinnerProps) {
-  return (
+export function Spinner({ size = 'md', className = '', fullScreen = false, text }: SpinnerProps) {
+  const spinner = (
     <div
       className={`
         animate-spin rounded-full
@@ -29,6 +31,26 @@ export function Spinner({ size = 'md', className = '' }: SpinnerProps) {
       aria-label="Loading"
     />
   );
+
+  if (fullScreen) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50">
+        {spinner}
+        {text && <p className="mt-4 text-gray-600">{text}</p>}
+      </div>
+    );
+  }
+
+  if (text) {
+    return (
+      <div className="flex flex-col items-center justify-center">
+        {spinner}
+        <p className="mt-2 text-gray-600 text-sm">{text}</p>
+      </div>
+    );
+  }
+
+  return spinner;
 }
 
 /**

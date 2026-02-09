@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
@@ -6,26 +6,74 @@ import {
   MagnifyingGlassIcon,
   FunnelIcon,
 } from '@heroicons/react/24/outline';
-import { Button, Input, Table, Pagination, StatusBadge } from '@/components/ui';
+import { Button, Input, Table, Pagination, StatusBadge, FilterDialog, countActiveFilters } from '@/components/ui';
+import type { FilterField } from '@/components/ui';
 import { paymentService } from '@/services/paymentService';
-import { logger } from '@/utils/logger';
 
-const pageLogger = logger.scope('PaymentListPage');
+const filterFields: FilterField[] = [
+  {
+    key: 'paymentMethod',
+    label: 'Payment Method',
+    type: 'select',
+    options: [
+      { value: 'CASH', label: 'Cash' },
+      { value: 'BANK_TRANSFER', label: 'Bank Transfer' },
+      { value: 'MOBILE_MONEY', label: 'Mobile Money' },
+      { value: 'CHEQUE', label: 'Cheque' },
+      { value: 'CARD', label: 'Card' },
+      { value: 'WALLET', label: 'Wallet' },
+      { value: 'OTHER', label: 'Other' },
+    ],
+  },
+  {
+    key: 'status',
+    label: 'Status',
+    type: 'select',
+    options: [
+      { value: 'PENDING', label: 'Pending' },
+      { value: 'COMPLETED', label: 'Completed' },
+      { value: 'FAILED', label: 'Failed' },
+      { value: 'REVERSED', label: 'Reversed' },
+    ],
+  },
+  {
+    key: 'paymentDate',
+    label: 'Payment Date',
+    type: 'dateRange',
+  },
+  {
+    key: 'amount',
+    label: 'Amount',
+    type: 'numberRange',
+  },
+];
 
 export function PaymentListPage() {
   const navigate = useNavigate();
   const [page, setPage] = useState(0);
   const [loanId, setLoanId] = useState('');
-
-  // TODO: Add filtering by date range or payment method if API supports it
+  const [showFilters, setShowFilters] = useState(false);
+  const [filters, setFilters] = useState<Record<string, any>>({});
 
   const { data, isLoading } = useQuery({
-    queryKey: ['payments', page, loanId],
+    queryKey: ['payments', page, loanId, filters],
     queryFn: () =>
       loanId
         ? paymentService.getByLoanId(loanId, page)
         : paymentService.getAll({ page }),
   });
+
+  const handleApplyFilters = (newFilters: Record<string, any>) => {
+    setFilters(newFilters);
+    setPage(0);
+  };
+
+  const handleClearFilters = () => {
+    setFilters({});
+    setPage(0);
+  };
+
+  const activeFilterCount = countActiveFilters(filters);
 
   return (
     <div className="space-y-6">
@@ -57,8 +105,17 @@ export function PaymentListPage() {
               leftIcon={<MagnifyingGlassIcon className="h-5 w-5" />}
             />
           </div>
-          <Button variant="outline" leftIcon={<FunnelIcon className="h-5 w-5" />}>
+          <Button
+            variant="outline"
+            leftIcon={<FunnelIcon className="h-5 w-5" />}
+            onClick={() => setShowFilters(true)}
+          >
             Filters
+            {activeFilterCount > 0 && (
+              <span className="ml-2 bg-primary-100 text-primary-700 px-2 py-0.5 rounded-full text-xs font-medium">
+                {activeFilterCount}
+              </span>
+            )}
           </Button>
         </div>
       </div>
@@ -68,7 +125,7 @@ export function PaymentListPage() {
           data={data?.content || []}
           isLoading={isLoading}
           keyExtractor={(item) => item.id}
-          // onRowClick={(item) => navigate(`/payments/${item.id}`)} // Details page if needed
+          onRowClick={(item) => navigate(`/payments/${item.id}`)}
           columns={[
             {
               header: 'Payment No.',
@@ -126,6 +183,17 @@ export function PaymentListPage() {
           />
         )}
       </div>
+
+      {showFilters && (
+        <FilterDialog
+          title="Filter Payments"
+          fields={filterFields}
+          values={filters}
+          onApply={handleApplyFilters}
+          onClose={() => setShowFilters(false)}
+          onClear={handleClearFilters}
+        />
+      )}
     </div>
   );
 }

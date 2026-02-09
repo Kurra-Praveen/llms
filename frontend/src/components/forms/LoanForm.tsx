@@ -141,7 +141,7 @@ export function LoanForm() {
     watch,
     formState: { errors, isSubmitting },
   } = useForm<LoanFormData>({
-    resolver: zodResolver(loanSchema),
+    resolver: zodResolver(loanSchema) as any,
     defaultValues: {
       interestType: 'FLAT',
       repaymentFrequency: 'MONTHLY',
@@ -382,7 +382,7 @@ export function LoanForm() {
           />
 
           {/* EMI Preview Section */}
-          {principalAmount > 0 && tenureMonths > 0 && (interestRate >= 0 || (interestType === 'DAILY_FIXED' && dailyFixedAmount > 0)) && (
+          {principalAmount > 0 && tenureMonths > 0 && (interestRate >= 0 || (interestType === 'DAILY_FIXED' && (dailyFixedAmount ?? 0) > 0)) && (
             <>
               <div className="col-span-full border-t border-gray-200 my-4" />
 

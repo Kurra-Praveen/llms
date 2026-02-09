@@ -1,48 +1,105 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
   PlusIcon,
-  MagnifyingGlassIcon,
   FunnelIcon,
 } from '@heroicons/react/24/outline';
-import { Button, Input, Table, Pagination, StatusBadge } from '@/components/ui';
+import { Button, Table, Pagination, StatusBadge, FilterDialog, countActiveFilters } from '@/components/ui';
+import type { FilterField } from '@/components/ui';
 import { loanService } from '@/services/loanService';
 import type { Loan } from '@/types';
 import { logger } from '@/utils/logger';
 
 const pageLogger = logger.scope('LoanListPage');
 
+const filterFields: FilterField[] = [
+  {
+    key: 'status',
+    label: 'Status',
+    type: 'select',
+    options: [
+      { value: 'DRAFT', label: 'Draft' },
+      { value: 'PENDING_APPROVAL', label: 'Pending Approval' },
+      { value: 'APPROVED', label: 'Approved' },
+      { value: 'ACTIVE', label: 'Active (Disbursed)' },
+      { value: 'CLOSED', label: 'Closed' },
+      { value: 'WRITTEN_OFF', label: 'Written Off' },
+      { value: 'REJECTED', label: 'Rejected' },
+      { value: 'CANCELLED', label: 'Cancelled' },
+    ],
+  },
+  {
+    key: 'interestType',
+    label: 'Interest Type',
+    type: 'select',
+    options: [
+      { value: 'FLAT', label: 'Flat Rate' },
+      { value: 'REDUCING_BALANCE', label: 'Reducing Balance' },
+      { value: 'SIMPLE', label: 'Simple Interest' },
+      { value: 'INTEREST_ONLY', label: 'Interest Only' },
+      { value: 'BULLET', label: 'Bullet' },
+      { value: 'DAILY_FIXED', label: 'Daily Fixed' },
+    ],
+  },
+  {
+    key: 'dpdBucket',
+    label: 'DPD Bucket',
+    type: 'select',
+    options: [
+      { value: 'CURRENT', label: 'Current (0 DPD)' },
+      { value: '1-30', label: '1-30 Days' },
+      { value: '31-60', label: '31-60 Days' },
+      { value: '61-90', label: '61-90 Days' },
+      { value: '90+', label: '90+ Days (NPA)' },
+    ],
+  },
+  {
+    key: 'disbursementDate',
+    label: 'Disbursement Date',
+    type: 'dateRange',
+  },
+  {
+    key: 'amount',
+    label: 'Loan Amount',
+    type: 'numberRange',
+  },
+];
+
 export function LoanListPage() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [page, setPage] = useState(0);
+  const [showFilters, setShowFilters] = useState(false);
 
   // Initialize filter from URL param
-  const [statusFilter, setStatusFilter] = useState<string>(searchParams.get('status') || '');
+  const [filters, setFilters] = useState<Record<string, any>>(() => {
+    const status = searchParams.get('status');
+    return status ? { status } : {};
+  });
 
   // Update URL when filter changes
   useEffect(() => {
-    if (statusFilter) {
-      setSearchParams({ status: statusFilter });
+    if (filters.status) {
+      setSearchParams({ status: filters.status });
     } else {
       setSearchParams({});
     }
-  }, [statusFilter, setSearchParams]);
+  }, [filters, setSearchParams]);
 
   // Sync state if URL changes externally (e.g. back button)
   useEffect(() => {
     const status = searchParams.get('status');
-    if (status !== null && status !== statusFilter) {
-      setStatusFilter(status);
+    if (status !== null && status !== filters.status) {
+      setFilters({ ...filters, status });
     }
   }, [searchParams]);
 
   const { data, isLoading } = useQuery({
-    queryKey: ['loans', page, statusFilter],
+    queryKey: ['loans', page, filters],
     queryFn: () =>
-      statusFilter
-        ? loanService.getByStatus(statusFilter, page)
+      filters.status
+        ? loanService.getByStatus(filters.status, page)
         : loanService.getAll({ page }),
   });
 
@@ -50,6 +107,18 @@ export function LoanListPage() {
     pageLogger.debug('Row clicked', { id: loan.id });
     navigate(`/loans/${loan.id}`);
   };
+
+  const handleApplyFilters = (newFilters: Record<string, any>) => {
+    setFilters(newFilters);
+    setPage(0);
+  };
+
+  const handleClearFilters = () => {
+    setFilters({});
+    setPage(0);
+  };
+
+  const activeFilterCount = countActiveFilters(filters);
 
   return (
     <div className="space-y-6">
@@ -76,9 +145,9 @@ export function LoanListPage() {
                   <FunnelIcon className="h-5 w-5 text-gray-400" />
                 </div>
                 <select
-                  value={statusFilter}
+                  value={filters.status || ''}
                   onChange={(e) => {
-                    setStatusFilter(e.target.value);
+                    setFilters({ ...filters, status: e.target.value });
                     setPage(0);
                   }}
                   className="block w-full pl-10 pr-10 py-2.5 text-base border-gray-300 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm rounded-lg"
@@ -93,7 +162,18 @@ export function LoanListPage() {
                 </select>
              </div>
           </div>
-          {/* Placeholder for search if needed later */}
+          <Button
+            variant="outline"
+            leftIcon={<FunnelIcon className="h-5 w-5" />}
+            onClick={() => setShowFilters(true)}
+          >
+            Advanced Filters
+            {activeFilterCount > 1 && (
+              <span className="ml-2 bg-primary-100 text-primary-700 px-2 py-0.5 rounded-full text-xs font-medium">
+                {activeFilterCount}
+              </span>
+            )}
+          </Button>
         </div>
       </div>
 
@@ -133,12 +213,34 @@ export function LoanListPage() {
             {
               header: 'Outstanding',
               cell: (item) => (
-                 <span className={`${item.totalOutstanding > 0 ? 'text-gray-900' : 'text-green-600'}`}>
+                 <span className={`${(item.totalOutstanding ?? 0) > 0 ? 'text-gray-900' : 'text-green-600'}`}>
                    {item.status === 'ACTIVE' || item.status === 'DISBURSED' || item.status === 'CLOSED'
-                     ? `₹${item.totalOutstanding?.toLocaleString() ?? '0'}`
+                     ? `₹${(item.totalOutstanding ?? 0).toLocaleString()}`
                      : '-'}
                  </span>
               ),
+            },
+            {
+              header: 'DPD',
+              cell: (item) => {
+                if (!['ACTIVE', 'DISBURSED'].includes(item.status)) return '-';
+                const dpd = item.dpd || 0;
+                return (
+                  <span
+                    className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                      dpd === 0
+                        ? 'bg-green-100 text-green-800'
+                        : dpd <= 30
+                        ? 'bg-yellow-100 text-yellow-800'
+                        : dpd <= 60
+                        ? 'bg-orange-100 text-orange-800'
+                        : 'bg-red-100 text-red-800'
+                    }`}
+                  >
+                    {dpd} days
+                  </span>
+                );
+              },
             },
             {
               header: 'Created',
@@ -156,6 +258,17 @@ export function LoanListPage() {
           />
         )}
       </div>
+
+      {showFilters && (
+        <FilterDialog
+          title="Filter Loans"
+          fields={filterFields}
+          values={filters}
+          onApply={handleApplyFilters}
+          onClose={() => setShowFilters(false)}
+          onClear={handleClearFilters}
+        />
+      )}
     </div>
   );
 }
