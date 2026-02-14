@@ -46,4 +46,15 @@ public interface PaymentRepository extends JpaRepository<Payment, UUID> {
     long countByTenantIdAndDate(@Param("tenantId") UUID tenantId, @Param("date") LocalDate date);
 
     boolean existsByIdempotencyKeyAndTenantId(String idempotencyKey, UUID tenantId);
+
+    @Query("SELECT new com.loanplatform.report.dto.DailyCollectionResponse(p.paymentDate, SUM(p.amountPaid), COUNT(p)) " +
+           "FROM Payment p WHERE p.tenantId = :tenantId AND p.paymentDate BETWEEN :startDate AND :endDate AND p.isReversed = false " +
+           "GROUP BY p.paymentDate ORDER BY p.paymentDate")
+    List<com.loanplatform.report.dto.DailyCollectionResponse> getDailyCollections(@Param("tenantId") UUID tenantId, @Param("startDate") LocalDate startDate, @Param("endDate") LocalDate endDate);
+
+    @Query("SELECT SUM(p.amountPaid) FROM Payment p WHERE p.tenantId = :tenantId AND p.paymentDate BETWEEN :startDate AND :endDate AND p.isReversed = false")
+    BigDecimal sumAmountPaidInDateRange(@Param("tenantId") UUID tenantId, @Param("startDate") LocalDate startDate, @Param("endDate") LocalDate endDate);
+
+    @Query("SELECT COUNT(p) FROM Payment p WHERE p.tenantId = :tenantId AND p.paymentDate BETWEEN :startDate AND :endDate AND p.isReversed = false")
+    long countPaymentsInDateRange(@Param("tenantId") UUID tenantId, @Param("startDate") LocalDate startDate, @Param("endDate") LocalDate endDate);
 }

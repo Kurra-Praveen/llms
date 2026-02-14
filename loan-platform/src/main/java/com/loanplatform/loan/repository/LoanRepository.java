@@ -63,4 +63,27 @@ public interface LoanRepository extends JpaRepository<Loan, UUID> {
 
     @Query("SELECT l FROM Loan l WHERE l.status = 'ACTIVE' AND l.deleted = false")
     List<Loan> findAllActiveLoans();
+
+    @Query("SELECT new com.loanplatform.report.dto.LoansByStatusResponse(l.status, COUNT(l), SUM(l.principalAmount)) " +
+           "FROM Loan l WHERE l.tenantId = :tenantId AND l.deleted = false GROUP BY l.status")
+    List<com.loanplatform.report.dto.LoansByStatusResponse> countLoansByStatus(@Param("tenantId") UUID tenantId);
+
+    @Query("SELECT SUM(l.principalAmount) FROM Loan l WHERE l.tenantId = :tenantId AND l.deleted = false AND l.status IN :statuses")
+    BigDecimal sumPrincipalByStatusIn(@Param("tenantId") UUID tenantId, @Param("statuses") List<LoanStatus> statuses);
+
+    @Query("SELECT SUM(l.outstandingPrincipal) FROM Loan l WHERE l.tenantId = :tenantId AND l.deleted = false AND l.status = 'ACTIVE'")
+    BigDecimal sumOutstandingPrincipalActive(@Param("tenantId") UUID tenantId);
+
+    @Query("SELECT SUM(l.totalPaid) FROM Loan l WHERE l.tenantId = :tenantId AND l.deleted = false")
+    BigDecimal sumTotalPaid(@Param("tenantId") UUID tenantId);
+
+    @Query("SELECT COUNT(l) FROM Loan l WHERE l.tenantId = :tenantId AND l.deleted = false AND l.status = 'ACTIVE' AND l.dpd >= :minDpd")
+    long countActiveLoansWithDpdAtLeast(@Param("tenantId") UUID tenantId, @Param("minDpd") int minDpd);
+
+    @Query("SELECT SUM(l.emiAmount) FROM Loan l WHERE l.tenantId = :tenantId AND l.deleted = false AND l.status = 'ACTIVE'")
+    BigDecimal sumEmiAmountActive(@Param("tenantId") UUID tenantId);
+
+    @Query("SELECT SUM(l.outstandingInterest + l.outstandingPenalty) FROM Loan l " +
+           "WHERE l.tenantId = :tenantId AND l.deleted = false AND l.status = 'ACTIVE' AND l.dpd > 0")
+    BigDecimal sumOverdueAmount(@Param("tenantId") UUID tenantId);
 }

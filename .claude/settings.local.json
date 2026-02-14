@@ -23,7 +23,10 @@
       "Bash(find:*)",
       "Bash(wc:*)",
       "Bash(curl:*)",
-      "Bash(pkill:*)"
+      "Bash(pkill:*)",
+      "Bash(grep:*)",
+      "Bash(./mvnw test:*)",
+      "Bash(mvn:*)"
     ]
   }
 }

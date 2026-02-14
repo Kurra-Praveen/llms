@@ -7,7 +7,9 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
+
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -41,4 +43,7 @@ public interface RepaymentScheduleRepository extends JpaRepository<RepaymentSche
 
     @Query("SELECT rs FROM RepaymentSchedule rs WHERE rs.tenantId = :tenantId AND rs.dueDate BETWEEN :startDate AND :endDate ORDER BY rs.dueDate")
     List<RepaymentSchedule> findSchedulesDueBetween(@Param("tenantId") UUID tenantId, @Param("startDate") LocalDate startDate, @Param("endDate") LocalDate endDate);
+
+    @Query("SELECT COALESCE(SUM(rs.installmentAmount), 0) FROM RepaymentSchedule rs WHERE rs.tenantId = :tenantId AND rs.dueDate BETWEEN :startDate AND :endDate")
+    BigDecimal sumTotalDueBetween(@Param("tenantId") UUID tenantId, @Param("startDate") LocalDate startDate, @Param("endDate") LocalDate endDate);
 }
