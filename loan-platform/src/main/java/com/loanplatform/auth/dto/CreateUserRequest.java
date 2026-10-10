@@ -38,4 +38,7 @@ public class CreateUserRequest {
 
     @NotNull(message = "Role is required")
     private Role role;
+
+    // Required when role = BORROWER: links the login account to the borrower record
+    private UUID borrowerId;
 }

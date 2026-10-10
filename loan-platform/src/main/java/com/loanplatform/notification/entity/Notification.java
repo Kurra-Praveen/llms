@@ -80,6 +80,9 @@ public class Notification {
     @Column(name = "scheduled_for")
     private Instant scheduledFor;
 
+    @Column(name = "read_at")
+    private Instant readAt;
+
     @Column(name = "created_at", nullable = false)
     @Builder.Default
     private Instant createdAt = Instant.now();
@@ -106,5 +109,12 @@ public class Notification {
         this.failureReason = reason;
         this.retryCount++;
         this.updatedAt = Instant.now();
+    }
+
+    public void markRead() {
+        if (this.readAt == null) {
+            this.readAt = Instant.now();
+            this.updatedAt = Instant.now();
+        }
     }
 }

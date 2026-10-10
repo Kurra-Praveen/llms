@@ -28,6 +28,11 @@ public interface UserRepository extends JpaRepository<User, UUID> {
 
     boolean existsByEmailAndTenantIdAndDeletedFalse(String email, UUID tenantId);
 
+    boolean existsByBorrowerIdAndDeletedFalse(UUID borrowerId);
+
+    @Query("SELECT u FROM User u WHERE u.borrowerId = :borrowerId AND u.deleted = false")
+    Optional<User> findByBorrowerIdAndDeletedFalse(@Param("borrowerId") UUID borrowerId);
+
     @Query("SELECT u FROM User u WHERE u.tenantId IS NULL AND u.email = :email AND u.deleted = false")
     Optional<User> findSuperAdminByEmail(@Param("email") String email);
 

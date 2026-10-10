@@ -42,6 +42,10 @@ public class JwtService {
             claims.put("tenantId", user.getTenantId().toString());
         }
 
+        if (user.getBorrowerId() != null) {
+            claims.put("borrowerId", user.getBorrowerId().toString());
+        }
+
         return Jwts.builder()
                 .claims(claims)
                 .subject(user.getId().toString())
@@ -93,6 +97,12 @@ public class JwtService {
         Claims claims = parseToken(token);
         String tenantId = claims.get("tenantId", String.class);
         return tenantId != null ? UUID.fromString(tenantId) : null;
+    }
+
+    public UUID extractBorrowerId(String token) {
+        Claims claims = parseToken(token);
+        String borrowerId = claims.get("borrowerId", String.class);
+        return borrowerId != null ? UUID.fromString(borrowerId) : null;
     }
 
     public String extractRole(String token) {

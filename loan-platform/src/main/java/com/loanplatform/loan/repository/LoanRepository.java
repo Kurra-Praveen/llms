@@ -29,6 +29,9 @@ public interface LoanRepository extends JpaRepository<Loan, UUID> {
     @Query("SELECT l FROM Loan l WHERE l.tenantId = :tenantId AND l.borrowerId = :borrowerId AND l.deleted = false")
     Page<Loan> findByTenantIdAndBorrowerId(@Param("tenantId") UUID tenantId, @Param("borrowerId") UUID borrowerId, Pageable pageable);
 
+    @Query("SELECT l.id FROM Loan l WHERE l.tenantId = :tenantId AND l.borrowerId = :borrowerId AND l.deleted = false")
+    List<UUID> findIdsByTenantIdAndBorrowerId(@Param("tenantId") UUID tenantId, @Param("borrowerId") UUID borrowerId);
+
     @Query("SELECT l FROM Loan l WHERE l.tenantId = :tenantId AND l.status = :status AND l.deleted = false")
     Page<Loan> findByTenantIdAndStatus(@Param("tenantId") UUID tenantId, @Param("status") LoanStatus status, Pageable pageable);
 

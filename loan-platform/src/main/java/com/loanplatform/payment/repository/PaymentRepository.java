@@ -36,6 +36,9 @@ public interface PaymentRepository extends JpaRepository<Payment, UUID> {
     @Query("SELECT p FROM Payment p WHERE p.loanId = :loanId AND p.isReversed = false ORDER BY p.paymentDate DESC")
     Page<Payment> findByLoanId(@Param("loanId") UUID loanId, Pageable pageable);
 
+    @Query("SELECT p FROM Payment p WHERE p.tenantId = :tenantId AND p.loanId IN :loanIds AND p.isReversed = false ORDER BY p.paymentDate DESC")
+    Page<Payment> findByTenantIdAndLoanIdIn(@Param("tenantId") UUID tenantId, @Param("loanIds") List<UUID> loanIds, Pageable pageable);
+
     @Query("SELECT p FROM Payment p WHERE p.tenantId = :tenantId AND p.paymentDate BETWEEN :startDate AND :endDate AND p.isReversed = false")
     List<Payment> findByTenantIdAndDateRange(@Param("tenantId") UUID tenantId, @Param("startDate") LocalDate startDate, @Param("endDate") LocalDate endDate);
 

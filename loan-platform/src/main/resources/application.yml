@@ -79,6 +79,12 @@ app:
     secret: ${JWT_SECRET:your-256-bit-secret-key-for-jwt-token-generation-must-be-long-enough}
     access-token-expiration: 3600000
     refresh-token-expiration: 604800000
+  firebase:
+    enabled: ${FIREBASE_ENABLED:false}
+    credentials-path: ${FIREBASE_CREDENTIALS_PATH:}
+  rate-limit:
+    auth-requests-per-minute: ${RATE_LIMIT_AUTH_PER_MINUTE:10}
+    portal-requests-per-minute: ${RATE_LIMIT_PORTAL_PER_MINUTE:60}
 
   security:
     password-strength: 12

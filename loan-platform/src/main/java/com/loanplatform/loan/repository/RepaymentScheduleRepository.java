@@ -2,6 +2,7 @@ package com.loanplatform.loan.repository;
 
 import com.loanplatform.loan.entity.RepaymentSchedule;
 import com.loanplatform.loan.entity.ScheduleStatus;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -26,6 +27,9 @@ public interface RepaymentScheduleRepository extends JpaRepository<RepaymentSche
 
     @Query("SELECT rs FROM RepaymentSchedule rs WHERE rs.loanId = :loanId AND rs.status IN ('PENDING', 'PARTIAL', 'OVERDUE') ORDER BY rs.dueDate, rs.installmentNumber")
     List<RepaymentSchedule> findUnpaidSchedulesByLoanId(@Param("loanId") UUID loanId);
+
+    @Query("SELECT rs FROM RepaymentSchedule rs WHERE rs.loanId IN :loanIds AND rs.status IN ('PENDING', 'PARTIAL', 'OVERDUE') ORDER BY rs.dueDate, rs.installmentNumber")
+    List<RepaymentSchedule> findUnpaidSchedulesByLoanIds(@Param("loanIds") List<UUID> loanIds, Pageable pageable);
 
     @Query("SELECT rs FROM RepaymentSchedule rs WHERE rs.tenantId = :tenantId AND rs.dueDate <= :date AND rs.status IN ('PENDING', 'PARTIAL') ORDER BY rs.dueDate")
     List<RepaymentSchedule> findDueSchedulesForTenant(@Param("tenantId") UUID tenantId, @Param("date") LocalDate date);

@@ -15,15 +15,17 @@ public class UserPrincipal implements UserDetails {
 
     private final UUID id;
     private final UUID tenantId;
+    private final UUID borrowerId;
     private final String email;
     private final String password;
     private final Role role;
     private final boolean enabled;
     private final Collection<? extends GrantedAuthority> authorities;
 
-    public UserPrincipal(UUID id, UUID tenantId, String email, String password, Role role, boolean enabled) {
+    public UserPrincipal(UUID id, UUID tenantId, UUID borrowerId, String email, String password, Role role, boolean enabled) {
         this.id = id;
         this.tenantId = tenantId;
+        this.borrowerId = borrowerId;
         this.email = email;
         this.password = password;
         this.role = role;
@@ -35,6 +37,7 @@ public class UserPrincipal implements UserDetails {
         return new UserPrincipal(
                 user.getId(),
                 user.getTenantId(),
+                user.getBorrowerId(),
                 user.getEmail(),
                 user.getPasswordHash(),
                 user.getRole(),
@@ -83,5 +86,9 @@ public class UserPrincipal implements UserDetails {
 
     public boolean hasTenant() {
         return tenantId != null;
+    }
+
+    public boolean isBorrower() {
+        return role == Role.BORROWER;
     }
 }

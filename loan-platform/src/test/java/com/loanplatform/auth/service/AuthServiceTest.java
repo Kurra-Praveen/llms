@@ -9,6 +9,7 @@ import com.loanplatform.auth.entity.UserStatus;
 import com.loanplatform.auth.repository.RefreshTokenRepository;
 import com.loanplatform.auth.repository.UserRepository;
 import com.loanplatform.auth.security.JwtService;
+import com.loanplatform.borrower.repository.BorrowerRepository;
 import com.loanplatform.common.exception.BusinessException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -42,6 +43,9 @@ class AuthServiceTest {
     private RefreshTokenRepository refreshTokenRepository;
 
     @Mock
+    private BorrowerRepository borrowerRepository;
+
+    @Mock
     private JwtService jwtService;
 
     @Mock
@@ -60,6 +64,7 @@ class AuthServiceTest {
         authService = new AuthService(
                 userRepository,
                 refreshTokenRepository,
+                borrowerRepository,
                 jwtService,
                 passwordEncoder,
                 authenticationManager

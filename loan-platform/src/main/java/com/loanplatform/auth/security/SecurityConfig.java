@@ -32,6 +32,7 @@ public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final CustomUserDetailsService userDetailsService;
+    private final com.loanplatform.common.security.RateLimitingFilter rateLimitingFilter;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -58,10 +59,14 @@ public class SecurityConfig {
                         .requestMatchers("/v1/payments/**").hasAnyRole("LENDER_ADMIN", "LENDER_STAFF")
                         .requestMatchers("/v1/reports/**").hasAnyRole("LENDER_ADMIN", "LENDER_STAFF")
 
+                        // Borrower self-service portal (mobile app)
+                        .requestMatchers("/v1/portal/**").hasRole("BORROWER")
+
                         // All other requests require authentication
                         .anyRequest().authenticated()
                 )
                 .authenticationProvider(authenticationProvider())
+                .addFilterBefore(rateLimitingFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

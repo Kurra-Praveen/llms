@@ -28,6 +28,12 @@ public interface NotificationRepository extends JpaRepository<Notification, UUID
     @Query("SELECT n FROM Notification n WHERE n.recipientId = :recipientId ORDER BY n.createdAt DESC")
     Page<Notification> findByRecipientId(@Param("recipientId") UUID recipientId, Pageable pageable);
 
+    @Query("SELECT n FROM Notification n WHERE n.recipientId = :recipientId AND n.tenantId = :tenantId ORDER BY n.createdAt DESC")
+    Page<Notification> findByRecipientIdAndTenantId(@Param("recipientId") UUID recipientId, @Param("tenantId") UUID tenantId, Pageable pageable);
+
+    @Query("SELECT COUNT(n) FROM Notification n WHERE n.recipientId = :recipientId AND n.tenantId = :tenantId AND n.readAt IS NULL")
+    long countUnreadByRecipientIdAndTenantId(@Param("recipientId") UUID recipientId, @Param("tenantId") UUID tenantId);
+
     @Query("SELECT n FROM Notification n WHERE n.status = 'FAILED' AND n.retryCount < :maxRetries ORDER BY n.failedAt")
     List<Notification> findFailedForRetry(@Param("maxRetries") int maxRetries);
 }

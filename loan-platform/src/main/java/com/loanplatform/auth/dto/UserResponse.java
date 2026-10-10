@@ -16,6 +16,7 @@ public class UserResponse {
 
     private UUID id;
     private UUID tenantId;
+    private UUID borrowerId;
     private String tenantName;
     private String email;
     private String firstName;

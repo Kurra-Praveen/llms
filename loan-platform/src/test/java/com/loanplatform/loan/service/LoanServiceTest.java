@@ -111,8 +111,8 @@ class LoanServiceTest {
             when(loanRepository.countByTenantId(TENANT_ID)).thenReturn(0L);
             when(borrowerRepository.findByIdAndTenantId(BORROWER_ID, TENANT_ID)).thenReturn(Optional.of(borrower));
             when(loanMapper.toEntity(any(CreateLoanRequest.class))).thenReturn(loan);
-            when(interestEngine.calculateEmi(any(), any(), anyInt(), any())).thenReturn(new BigDecimal("8884.88"));
-            when(interestEngine.calculateTotalInterest(any(), any(), anyInt(), any())).thenReturn(new BigDecimal("6618.56"));
+            when(interestEngine.calculateEmi(any(), any(), anyInt(), any(), any())).thenReturn(new BigDecimal("8884.88"));
+            when(interestEngine.calculateTotalInterest(any(), any(), anyInt(), any(), any())).thenReturn(new BigDecimal("6618.56"));
             when(loanRepository.save(any(Loan.class))).thenReturn(loan);
             when(loanMapper.toResponse(any(Loan.class))).thenReturn(expectedResponse);
 

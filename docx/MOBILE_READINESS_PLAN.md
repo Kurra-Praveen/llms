@@ -1,7 +1,7 @@
 # Mobile Readiness Plan — Living Document
 
 > **Status legend:** ⬜ TODO · 🔄 IN PROGRESS · ✅ DONE
-> **Last updated:** 2026-10-10
+> **Last updated:** 2026-10-10 (evening — P0 + P1 complete)
 > **Scope:** Extend the Multi-Tenant Loan Platform to an Android borrower self-service app (React Native + Expo), backend-blockers-first.
 
 ---
@@ -28,19 +28,19 @@
 
 | # | Item | Status | Completed | Notes |
 |---|------|--------|-----------|-------|
-| 1 | **Link users ↔ borrowers**: Flyway V11 `users.borrower_id` FK → `borrowers.id`; update `User` entity; add `borrowerId` JWT claim | ⬜ | — | Blocks everything |
-| 2 | **Borrower-scoped authorization + portal API**: borrower context/filter (mirror `TenantAspect` pattern) + `/v1/portal/**` endpoints (my profile, my loans, my schedule, my payments) | ⬜ | — | Depends on #1 |
-| 3 | **Borrower provisioning**: staff-created borrower logins (extend `POST /v1/auth/users` or auto-create on borrower creation) | ⬜ | — | Depends on #1 |
-| 4 | **FCM push**: `firebase-admin` dep, real PUSH delivery in `NotificationService`, `POST/DELETE /v1/devices` token registration, wire PUSH into due-reminder/receipt/overdue notifications | ⬜ | — | Parallel with #2–3 |
-| 5 | **Notification query API**: `NotificationController` (list / get / mark-read) for in-app notification center | ⬜ | — | Parallel with #4 |
+| 1 | **Link users ↔ borrowers**: Flyway V11 `users.borrower_id` FK → `borrowers.id`; update `User` entity; add `borrowerId` JWT claim | ✅ | 2026-10-10 | `V11__link_users_to_borrowers.sql`, `User.java`, `JwtService.java`, `UserPrincipal.java`, `AuthResponse.java` |
+| 2 | **Borrower-scoped authorization + portal API**: borrower context/filter (mirror `TenantAspect` pattern) + `/v1/portal/**` endpoints (my profile, my loans, my schedule, my payments) | ✅ | 2026-10-10 | New `portal/` module: `PortalController` + `PortalService` + `SecurityUtils.requireBorrowerId()`; ownership checks return 404 (not 403) to avoid leaking existence; `/v1/portal/**` gated to `BORROWER` role in `SecurityConfig.java` |
+| 3 | **Borrower provisioning**: staff-created borrower logins (extend `POST /v1/auth/users` or auto-create on borrower creation) | ✅ | 2026-10-10 | `CreateUserRequest.borrowerId` + validation in `AuthService.createUser()` (borrower must exist in tenant, one login per borrower) |
+| 4 | **FCM push**: `firebase-admin` dep, real PUSH delivery in `NotificationService`, `POST/DELETE /v1/devices` token registration, wire PUSH into due-reminder/receipt/overdue notifications | ✅ | 2026-10-10 | `PushNotificationService` (disabled by default; enable via `FIREBASE_ENABLED=true` + credentials), `DeviceToken` entity + V12 migration, `DeviceController`, PUSH added to all 4 notification types |
+| 5 | **Notification query API**: `NotificationController` (list / get / mark-read) for in-app notification center | ✅ | 2026-10-10 | `GET /v1/notifications`, `GET /v1/notifications/unread-count`, `POST /v1/notifications/{id}/read`; `read_at` column in V12 |
 
 ### 🟠 P1 — Security hardening (before real borrowers log in)
 
 | # | Item | Status | Completed | Notes |
 |---|------|--------|-----------|-------|
-| 6 | **Refresh-token rotation**: issue new refresh token on every refresh | ⬜ | — | Parallel |
-| 7 | **Rate limiting** (Bucket4j) on `/v1/auth/**` + `/v1/portal/**` | ⬜ | — | Parallel |
-| 8 | **Borrower-isolation integration tests**: assert borrower A cannot read borrower B's data on every portal endpoint | ⬜ | — | Depends on #2 |
+| 6 | **Refresh-token rotation**: issue new refresh token on every refresh | ✅ | 2026-10-10 | Rotation was already implemented; **added reuse detection** — replaying a revoked token revokes the user's whole token family (`AuthService.refreshToken()`) |
+| 7 | **Rate limiting** (Bucket4j) on `/v1/auth/**` + `/v1/portal/**` | ✅ | 2026-10-10 | `RateLimitingFilter` — per-IP in-memory buckets: 10 req/min auth, 60 req/min portal (env-configurable). Note: single-instance; use Redis-backed buckets if scaling out |
+| 8 | **Borrower-isolation integration tests**: assert borrower A cannot read borrower B's data on every portal endpoint | ✅ | 2026-10-10 | `PortalControllerIntegrationTest` — 12 tests: own-data access (5), cross-borrower isolation (4), role enforcement (3). All passing |
 
 ### 🟡 P2 — Deferred (pending product decisions)
 
@@ -49,6 +49,8 @@
 | 9 | Payment gateway (Razorpay/UPI) or record-payment-intent endpoint | ⬜ | — | Behind feature flag |
 | 10 | KYC document upload (S3/MinIO + multipart endpoints) | ⬜ | — | Needs storage infra |
 | 11 | HTTP caching headers, CORS externalization, Sentry, GitHub Actions CI | ⬜ | — | Anytime |
+
+**Test status:** `mvn test` → **127 tests, 0 failures, 0 errors** (115 pre-existing + 12 new portal isolation tests). Also fixed a pre-existing broken stub in `LoanServiceTest` (4-arg → 5-arg `calculateEmi` after V10).
 
 ---
 
@@ -143,3 +145,4 @@ React web (staff)          Future Android app (borrower)
 | Date | Change |
 |------|--------|
 | 2026-10-10 | Document created. Backend-first execution approved. P0 #1 started. |
+| 2026-10-10 | **P0 (all 5) + P1 (all 3) completed and test-verified.** New: `portal/` module (7 endpoints), notification center API, device registration, FCM push service, V11+V12 migrations, rate limiting, token reuse detection, 12 isolation tests. `mvn test`: 127/127 green. **Backend is mobile-ready.** Next: Phase 1 — monorepo + shared package + Expo skeleton. |

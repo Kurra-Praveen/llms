@@ -8,6 +8,7 @@ import com.loanplatform.auth.entity.UserStatus;
 import com.loanplatform.auth.repository.RefreshTokenRepository;
 import com.loanplatform.auth.repository.UserRepository;
 import com.loanplatform.auth.security.JwtService;
+import com.loanplatform.borrower.repository.BorrowerRepository;
 import com.loanplatform.common.exception.BusinessException;
 import com.loanplatform.common.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -34,6 +35,7 @@ public class AuthService {
 
     private final UserRepository userRepository;
     private final RefreshTokenRepository refreshTokenRepository;
+    private final BorrowerRepository borrowerRepository;
     private final JwtService jwtService;
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
@@ -83,8 +85,17 @@ public class AuthService {
         String tokenHash = hashToken(request.getRefreshToken());
 
         RefreshToken storedToken = refreshTokenRepository.findByTokenHashAndRevokedFalse(tokenHash)
-                .orElseThrow(() -> new BusinessException("Invalid refresh token",
-                        HttpStatus.UNAUTHORIZED, "INVALID_TOKEN"));
+                .orElseGet(() -> {
+                    // Reuse detection: a revoked/expired token being replayed indicates possible theft.
+                    // Revoke the user's entire token family to force re-authentication.
+                    refreshTokenRepository.findByTokenHash(tokenHash).ifPresent(revoked -> {
+                        log.warn("Revoked refresh token replayed for user {} — revoking all sessions",
+                                revoked.getUserId());
+                        refreshTokenRepository.revokeAllByUserId(revoked.getUserId(), Instant.now());
+                    });
+                    throw new BusinessException("Invalid refresh token",
+                            HttpStatus.UNAUTHORIZED, "INVALID_TOKEN");
+                });
 
         if (storedToken.isExpired()) {
             storedToken.revoke();
@@ -132,8 +143,16 @@ public class AuthService {
                     "TENANT_REQUIRED");
         }
 
+        if (request.getRole() == Role.BORROWER) {
+            validateBorrowerLink(request);
+        } else if (request.getBorrowerId() != null) {
+            throw new BusinessException("Only BORROWER-role users can be linked to a borrower record",
+                    "INVALID_BORROWER_LINK");
+        }
+
         User user = User.builder()
                 .tenantId(request.getTenantId())
+                .borrowerId(request.getRole() == Role.BORROWER ? request.getBorrowerId() : null)
                 .email(request.getEmail())
                 .passwordHash(passwordEncoder.encode(request.getPassword()))
                 .firstName(request.getFirstName())
@@ -149,6 +168,20 @@ public class AuthService {
         log.info("User created: {} by {}", user.getId(), createdByUserId);
 
         return mapToUserResponse(user);
+    }
+
+    private void validateBorrowerLink(CreateUserRequest request) {
+        if (request.getBorrowerId() == null) {
+            throw new BusinessException("Borrower ID is required for BORROWER-role users",
+                    "BORROWER_REQUIRED");
+        }
+        borrowerRepository.findByIdAndTenantId(request.getBorrowerId(), request.getTenantId())
+                .orElseThrow(() -> new BusinessException(
+                        "Borrower not found in this tenant", "BORROWER_NOT_FOUND"));
+        if (userRepository.existsByBorrowerIdAndDeletedFalse(request.getBorrowerId())) {
+            throw new BusinessException("A user account is already linked to this borrower",
+                    "BORROWER_ALREADY_LINKED");
+        }
     }
 
     @Transactional(readOnly = true)
@@ -187,6 +220,7 @@ public class AuthService {
                 .user(AuthResponse.UserDto.builder()
                         .id(user.getId())
                         .tenantId(user.getTenantId())
+                        .borrowerId(user.getBorrowerId())
                         .email(user.getEmail())
                         .firstName(user.getFirstName())
                         .lastName(user.getLastName())
@@ -204,6 +238,7 @@ public class AuthService {
         return UserResponse.builder()
                 .id(user.getId())
                 .tenantId(user.getTenantId())
+                .borrowerId(user.getBorrowerId())
                 .tenantName(tenantName)
                 .email(user.getEmail())
                 .firstName(user.getFirstName())

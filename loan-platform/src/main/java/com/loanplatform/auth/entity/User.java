@@ -27,6 +27,9 @@ public class User extends BaseEntity {
     @JoinColumn(name = "tenant_id", insertable = false, updatable = false)
     private Tenant tenant;
 
+    @Column(name = "borrower_id")
+    private UUID borrowerId;
+
     @Column(nullable = false)
     private String email;
 

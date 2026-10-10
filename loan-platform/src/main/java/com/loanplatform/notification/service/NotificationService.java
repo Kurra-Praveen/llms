@@ -1,14 +1,22 @@
 package com.loanplatform.notification.service;
 
+import com.loanplatform.auth.entity.Role;
+import com.loanplatform.auth.security.SecurityUtils;
+import com.loanplatform.auth.security.UserPrincipal;
 import com.loanplatform.borrower.entity.Borrower;
 import com.loanplatform.common.config.TenantContext;
+import com.loanplatform.common.dto.PagedResponse;
+import com.loanplatform.common.exception.ResourceNotFoundException;
 import com.loanplatform.loan.entity.Loan;
+import com.loanplatform.notification.dto.NotificationResponse;
 import com.loanplatform.notification.entity.Notification;
 import com.loanplatform.notification.entity.NotificationChannel;
 import com.loanplatform.notification.entity.NotificationStatus;
 import com.loanplatform.notification.repository.NotificationRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,6 +35,7 @@ import java.util.UUID;
 public class NotificationService {
 
     private final NotificationRepository notificationRepository;
+    private final PushNotificationService pushNotificationService;
 
     private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("dd-MMM-yyyy");
 
@@ -53,6 +62,7 @@ public class NotificationService {
         );
 
         createAndSendNotification(tenantId, borrower, loan, NotificationChannel.SMS, null, smsContent);
+        createAndSendNotification(tenantId, borrower, loan, NotificationChannel.PUSH, "Loan Disbursed", smsContent);
 
         log.info("Loan disbursement notification sent for loan: {}", loan.getId());
     }
@@ -72,6 +82,7 @@ public class NotificationService {
         );
 
         createAndSendNotification(tenantId, borrower, loan, NotificationChannel.SMS, null, smsContent);
+        createAndSendNotification(tenantId, borrower, loan, NotificationChannel.PUSH, "Payment Received", smsContent);
 
         log.info("Payment received notification sent for loan: {}", loan.getId());
     }
@@ -90,6 +101,7 @@ public class NotificationService {
         );
 
         createAndSendNotification(tenantId, borrower, loan, NotificationChannel.SMS, null, smsContent);
+        createAndSendNotification(tenantId, borrower, loan, NotificationChannel.PUSH, "EMI Due Reminder", smsContent);
 
         log.info("Payment due reminder sent for loan: {}", loan.getId());
     }
@@ -108,6 +120,7 @@ public class NotificationService {
         );
 
         createAndSendNotification(tenantId, borrower, loan, NotificationChannel.SMS, null, smsContent);
+        createAndSendNotification(tenantId, borrower, loan, NotificationChannel.PUSH, "Overdue Alert", smsContent);
 
         log.info("Overdue alert sent for loan: {}", loan.getId());
     }
@@ -130,11 +143,17 @@ public class NotificationService {
 
     private void createAndSendNotification(UUID tenantId, Borrower borrower, Loan loan,
                                             NotificationChannel channel, String subject, String content) {
+        String recipientContact = switch (channel) {
+            case EMAIL -> borrower.getEmail();
+            case PUSH -> borrower.getId().toString(); // resolved to device tokens at send time
+            default -> borrower.getPhone();
+        };
+
         Notification notification = Notification.builder()
                 .tenantId(tenantId)
                 .recipientType("BORROWER")
                 .recipientId(borrower.getId())
-                .recipientContact(channel == NotificationChannel.EMAIL ? borrower.getEmail() : borrower.getPhone())
+                .recipientContact(recipientContact)
                 .channel(channel)
                 .subject(subject)
                 .content(content)
@@ -149,6 +168,12 @@ public class NotificationService {
     }
 
     private void sendNotification(Notification notification) {
+        if (notification.getChannel() == NotificationChannel.PUSH) {
+            pushNotificationService.send(notification);
+            return;
+        }
+
+        // SMS/EMAIL — provider integration (Twilio/MSG91/SendGrid) still pending; log and mark sent
         log.info("Sending {} notification to: {}", notification.getChannel(), notification.getRecipientContact());
 
         String externalId = "EXT-" + System.currentTimeMillis();
@@ -161,5 +186,78 @@ public class NotificationService {
     private String formatAmount(BigDecimal amount) {
         if (amount == null) return "0.00";
         return String.format("%,.2f", amount);
+    }
+
+    // ------------------------------------------------------------------
+    // Notification center (borrower app / staff inbox)
+    // ------------------------------------------------------------------
+
+    @Transactional(readOnly = true)
+    public PagedResponse<NotificationResponse> getMyNotifications(int page, int size) {
+        UserPrincipal user = SecurityUtils.getCurrentUser();
+        UUID tenantId = TenantContext.requireTenant();
+        UUID recipientId = resolveRecipientId(user);
+        if (recipientId == null) {
+            return PagedResponse.of(List.of(), page, size, 0);
+        }
+
+        Page<Notification> notifications = notificationRepository
+                .findByRecipientIdAndTenantId(recipientId, tenantId, PageRequest.of(page, size));
+
+        List<NotificationResponse> content = notifications.getContent().stream()
+                .map(this::toResponse)
+                .toList();
+        return PagedResponse.of(content, notifications.getNumber(), notifications.getSize(),
+                notifications.getTotalElements());
+    }
+
+    @Transactional(readOnly = true)
+    public long getMyUnreadCount() {
+        UserPrincipal user = SecurityUtils.getCurrentUser();
+        UUID tenantId = TenantContext.requireTenant();
+        UUID recipientId = resolveRecipientId(user);
+        if (recipientId == null) {
+            return 0;
+        }
+        return notificationRepository.countUnreadByRecipientIdAndTenantId(recipientId, tenantId);
+    }
+
+    @Transactional
+    public NotificationResponse markAsRead(UUID notificationId) {
+        UserPrincipal user = SecurityUtils.getCurrentUser();
+        UUID tenantId = TenantContext.requireTenant();
+        UUID recipientId = resolveRecipientId(user);
+
+        Notification notification = notificationRepository.findById(notificationId)
+                .filter(n -> n.getTenantId().equals(tenantId)
+                        && recipientId != null && recipientId.equals(n.getRecipientId()))
+                .orElseThrow(() -> new ResourceNotFoundException("Notification", notificationId));
+
+        notification.markRead();
+        notificationRepository.save(notification);
+        return toResponse(notification);
+    }
+
+    /**
+     * Borrowers receive notifications addressed to their borrower record;
+     * staff users receive notifications addressed to their user account.
+     */
+    private UUID resolveRecipientId(UserPrincipal user) {
+        return user.getRole() == Role.BORROWER ? user.getBorrowerId() : user.getId();
+    }
+
+    private NotificationResponse toResponse(Notification notification) {
+        return NotificationResponse.builder()
+                .id(notification.getId())
+                .channel(notification.getChannel().name())
+                .subject(notification.getSubject())
+                .content(notification.getContent())
+                .referenceType(notification.getReferenceType())
+                .referenceId(notification.getReferenceId())
+                .loanId(notification.getLoanId())
+                .status(notification.getStatus().name())
+                .readAt(notification.getReadAt())
+                .createdAt(notification.getCreatedAt())
+                .build();
     }
 }

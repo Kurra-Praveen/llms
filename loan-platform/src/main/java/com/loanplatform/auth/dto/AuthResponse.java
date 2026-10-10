@@ -26,6 +26,7 @@ public class AuthResponse {
     public static class UserDto {
         private UUID id;
         private UUID tenantId;
+        private UUID borrowerId;
         private String email;
         private String firstName;
         private String lastName;
