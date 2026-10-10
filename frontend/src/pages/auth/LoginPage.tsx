@@ -156,7 +156,7 @@ export function LoginPage() {
         <div className="text-center text-sm text-gray-500 mt-4">
           <p>Demo credentials:</p>
           <p className="font-mono text-xs mt-1">
-            admin@example.com / password123
+            admin@loanplatform.com / admin123
           </p>
         </div>
       </div>
