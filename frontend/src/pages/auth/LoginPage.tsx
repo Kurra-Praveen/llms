@@ -2,7 +2,7 @@
  * Login Page
  */
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -22,7 +22,7 @@ const loginSchema = z.object({
 type LoginFormData = z.infer<typeof loginSchema>;
 
 export function LoginPage() {
-  const { login, isAuthenticated, isLoading: authLoading, error: authError, clearError } = useAuth();
+  const { login, isAuthenticated, isLoading: authLoading, error: authError, clearError, user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -35,14 +35,17 @@ export function LoginPage() {
     resolver: zodResolver(loginSchema),
   });
 
+  // Borrowers land on the self-service portal; staff on the dashboard
+  const getHomeRoute = (role?: string) => (role === 'BORROWER' ? '/portal' : '/dashboard');
+
   // Redirect if already authenticated
   useEffect(() => {
     if (isAuthenticated) {
-      const from = (location.state as any)?.from?.pathname || '/dashboard';
+      const from = (location.state as any)?.from?.pathname || getHomeRoute(user?.role);
       loginLogger.info('Already authenticated, redirecting', { to: from });
       navigate(from, { replace: true });
     }
-  }, [isAuthenticated, navigate, location]);
+  }, [isAuthenticated, navigate, location, user]);
 
   // Clear error on unmount
   useEffect(() => {
@@ -56,8 +59,8 @@ export function LoginPage() {
     setIsSubmitting(true);
 
     try {
-      await login(data);
-      const from = (location.state as any)?.from?.pathname || '/dashboard';
+      const authData = await login(data);
+      const from = (location.state as any)?.from?.pathname || getHomeRoute(authData?.user?.role);
       loginLogger.info('Login successful, navigating', { to: from });
       navigate(from, { replace: true });
     } catch (error: any) {

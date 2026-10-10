@@ -26,17 +26,21 @@ interface NavItem {
 }
 
 const navigation: NavItem[] = [
-  { name: 'Dashboard', href: '/dashboard', icon: HomeIcon },
-  { name: 'Borrowers', href: '/borrowers', icon: UsersIcon },
-  { name: 'Loans', href: '/loans', icon: BanknotesIcon },
-  { name: 'Payments', href: '/payments', icon: CreditCardIcon },
-  { name: 'Reports', href: '/reports', icon: ChartBarIcon },
+  { name: 'Dashboard', href: '/dashboard', icon: HomeIcon, roles: ['SUPER_ADMIN', 'LENDER_ADMIN', 'LENDER_STAFF'] },
+  { name: 'Borrowers', href: '/borrowers', icon: UsersIcon, roles: ['SUPER_ADMIN', 'LENDER_ADMIN', 'LENDER_STAFF'] },
+  { name: 'Loans', href: '/loans', icon: BanknotesIcon, roles: ['SUPER_ADMIN', 'LENDER_ADMIN', 'LENDER_STAFF'] },
+  { name: 'Payments', href: '/payments', icon: CreditCardIcon, roles: ['SUPER_ADMIN', 'LENDER_ADMIN', 'LENDER_STAFF'] },
+  { name: 'Reports', href: '/reports', icon: ChartBarIcon, roles: ['SUPER_ADMIN', 'LENDER_ADMIN', 'LENDER_STAFF'] },
   {
     name: 'Tenants',
     href: '/tenants',
     icon: BuildingOfficeIcon,
     roles: ['SUPER_ADMIN'],
   },
+  // Borrower self-service portal
+  { name: 'Home', href: '/portal', icon: HomeIcon, roles: ['BORROWER'] },
+  { name: 'My Loans', href: '/portal/loans', icon: BanknotesIcon, roles: ['BORROWER'] },
+  { name: 'Payments', href: '/portal/payments', icon: CreditCardIcon, roles: ['BORROWER'] },
   { name: 'Settings', href: '/settings', icon: Cog6ToothIcon },
 ];
 

@@ -40,6 +40,13 @@ appLogger.info('App initializing', {
 
 import { LoanListPage, LoanDetailsPage } from '@/pages/loans';
 import { LoanForm } from '@/components/forms/LoanForm';
+import {
+  PortalDashboardPage,
+  PortalLoansPage,
+  PortalLoanDetailsPage,
+  PortalPaymentsPage,
+  NotificationsPage,
+} from '@/pages/portal';
 
 function NotFoundPage() {
   appLogger.warn('404 - Page not found');
@@ -72,6 +79,7 @@ function App() {
 
             {/* Protected routes with layout */}
             <Route element={<MainLayout />}>
+              {/* Staff routes */}
               <Route path="/dashboard" element={<DashboardPage />} />
               <Route path="/borrowers" element={<BorrowerListPage />} />
               <Route path="/borrowers/new" element={<AddBorrowerPage />} />
@@ -87,6 +95,15 @@ function App() {
               <Route path="/tenants" element={<TenantListPage />} />
               <Route path="/tenants/new" element={<TenantOnboardingPage />} />
               <Route path="/settings" element={<SettingsPage />} />
+
+              {/* Borrower self-service portal */}
+              <Route path="/portal" element={<PortalDashboardPage />} />
+              <Route path="/portal/loans" element={<PortalLoansPage />} />
+              <Route path="/portal/loans/:id" element={<PortalLoanDetailsPage />} />
+              <Route path="/portal/payments" element={<PortalPaymentsPage />} />
+
+              {/* Shared */}
+              <Route path="/notifications" element={<NotificationsPage />} />
             </Route>
 
             {/* Redirect root to dashboard */}

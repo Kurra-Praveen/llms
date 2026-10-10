@@ -33,6 +33,7 @@ export type UserStatus = 'ACTIVE' | 'INACTIVE' | 'LOCKED' | 'PENDING_VERIFICATIO
 export interface User {
   id: string;
   tenantId?: string;
+  borrowerId?: string;
   email: string;
   firstName: string;
   lastName: string;
@@ -328,4 +329,67 @@ export interface DashboardSummary {
   overdueAmount: number;
   paymentsToday: number;
   collectionToday: number;
+}
+
+// ---------------------------------------------------------------------------
+// Borrower Portal types (self-service, /v1/portal/**)
+// ---------------------------------------------------------------------------
+
+export interface PortalSummary {
+  activeLoansCount: number;
+  totalOutstanding: number;
+  nextEmi?: NextEmi;
+}
+
+export interface NextEmi {
+  loanId: string;
+  loanNumber?: string;
+  installmentNumber: number;
+  dueDate: string;
+  installmentAmount: number;
+  outstandingAmount: number;
+  status: ScheduleStatus;
+  daysPastDue?: number;
+}
+
+// ---------------------------------------------------------------------------
+// Notification types (/v1/notifications, /v1/devices)
+// ---------------------------------------------------------------------------
+
+export type NotificationChannel = 'SMS' | 'EMAIL' | 'IN_APP' | 'PUSH';
+export type NotificationStatus = 'PENDING' | 'SENT' | 'DELIVERED' | 'FAILED' | 'CANCELLED';
+
+export interface AppNotification {
+  id: string;
+  channel: NotificationChannel;
+  subject?: string;
+  content: string;
+  referenceType?: string;
+  referenceId?: string;
+  loanId?: string;
+  status: NotificationStatus;
+  readAt?: string;
+  createdAt: string;
+}
+
+export type DevicePlatform = 'ANDROID' | 'IOS';
+
+export interface DeviceTokenRequest {
+  token: string;
+  platform: DevicePlatform;
+}
+
+// ---------------------------------------------------------------------------
+// User management (staff creating borrower login accounts)
+// ---------------------------------------------------------------------------
+
+export interface CreateUserRequest {
+  tenantId?: string;
+  email: string;
+  password: string;
+  firstName: string;
+  lastName: string;
+  phone?: string;
+  role: Role;
+  borrowerId?: string;
 }

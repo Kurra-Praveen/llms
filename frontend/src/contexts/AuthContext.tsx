@@ -7,7 +7,7 @@ import React, { createContext, useContext, useEffect, useState, useCallback } fr
 import { useNavigate } from 'react-router-dom';
 import { authService } from '@/services';
 import { logger } from '@/utils/logger';
-import type { User, LoginRequest, Role } from '@/types';
+import type { User, LoginRequest, Role, AuthResponse } from '@/types';
 
 const authLogger = logger.scope('AuthContext');
 
@@ -16,7 +16,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
-  login: (credentials: LoginRequest) => Promise<void>;
+  login(credentials: LoginRequest): Promise<AuthResponse>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
   hasRole: (roles: Role | Role[]) => boolean;
@@ -83,7 +83,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   /**
    * Login with credentials
    */
-  const login = useCallback(async (credentials: LoginRequest) => {
+  const login = useCallback(async (credentials: LoginRequest): Promise<AuthResponse> => {
     authLogger.info('Login attempt', { email: credentials.email });
     setIsLoading(true);
     setError(null);
@@ -95,6 +95,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         userId: authData.user.id,
         role: authData.user.role,
       });
+      return authData;
     } catch (err: any) {
       const errorMessage = err.response?.data?.message || err.message || 'Login failed';
       authLogger.error('Login failed', { error: errorMessage });

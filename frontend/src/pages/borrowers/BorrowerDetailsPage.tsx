@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
@@ -6,10 +6,13 @@ import {
   PencilIcon,
   TrashIcon,
   NoSymbolIcon,
-  CheckCircleIcon
+  CheckCircleIcon,
+  KeyIcon
 } from '@heroicons/react/24/outline';
-import { Button, Card, CardHeader, StatusBadge, Spinner, Badge } from '@/components/ui';
+import { Button, Card, CardHeader, StatusBadge, Spinner, Badge, Input } from '@/components/ui';
 import { borrowerService } from '@/services/borrowerService';
+import { authService } from '@/services';
+import { useAuth } from '@/contexts/AuthContext';
 import { logger } from '@/utils/logger';
 
 const detailsLogger = logger.scope('BorrowerDetailsPage');
@@ -17,12 +20,55 @@ const detailsLogger = logger.scope('BorrowerDetailsPage');
 export function BorrowerDetailsPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { user: currentUser } = useAuth();
 
   const { data: borrower, isLoading, error } = useQuery({
     queryKey: ['borrower', id],
     queryFn: () => borrowerService.getById(id!),
     enabled: !!id,
   });
+
+  // Create-login modal state
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [loginEmail, setLoginEmail] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
+  const [loginError, setLoginError] = useState<string | null>(null);
+  const [loginSuccess, setLoginSuccess] = useState(false);
+  const [creatingLogin, setCreatingLogin] = useState(false);
+
+  const openLoginModal = () => {
+    setLoginEmail(borrower?.email ?? '');
+    setLoginPassword('');
+    setLoginError(null);
+    setLoginSuccess(false);
+    setShowLoginModal(true);
+  };
+
+  const handleCreateLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!borrower || !currentUser?.tenantId) return;
+
+    setCreatingLogin(true);
+    setLoginError(null);
+    try {
+      await authService.createUserAccount({
+        tenantId: currentUser.tenantId,
+        email: loginEmail,
+        password: loginPassword,
+        firstName: borrower.fullName.split(' ')[0] ?? borrower.fullName,
+        lastName: borrower.fullName.split(' ').slice(1).join(' ') || '-',
+        phone: borrower.phone,
+        role: 'BORROWER',
+        borrowerId: borrower.id,
+      });
+      setLoginSuccess(true);
+      detailsLogger.info('Borrower login created', { borrowerId: borrower.id });
+    } catch (err: any) {
+      setLoginError(err.response?.data?.message || err.message || 'Failed to create login');
+    } finally {
+      setCreatingLogin(false);
+    }
+  };
 
   if (isLoading) {
     return <Spinner fullScreen text="Loading borrower details..." />;
@@ -77,36 +123,13 @@ export function BorrowerDetailsPage() {
           >
             Edit
           </Button>
-          {borrower.status === 'ACTIVE' ? (
-            <Button
-              variant="danger"
-              leftIcon={<NoSymbolIcon className="h-4 w-4" />}
-              onClick={() => {
-                if (confirm('Are you sure you want to block this borrower?')) {
-                  borrowerService.block(borrower.id).then(() => {
-                    // Refresh query
-                    window.location.reload();
-                  });
-                }
-              }}
-            >
-              Block
-            </Button>
-          ) : (
-             <Button
-              variant="secondary"
-              leftIcon={<CheckCircleIcon className="h-4 w-4 text-green-600" />}
-              onClick={() => {
-                if (confirm('Are you sure you want to activate this borrower?')) {
-                  borrowerService.activate(borrower.id).then(() => {
-                    window.location.reload();
-                  });
-                }
-              }}
-            >
-              Activate
-            </Button>
-          )}
+          <Button
+            variant="secondary"
+            leftIcon={<KeyIcon className="h-4 w-4" />}
+            onClick={openLoginModal}
+          >
+            Create Login
+          </Button>
         </div>
       </div>
 
@@ -244,6 +267,49 @@ export function BorrowerDetailsPage() {
           )}
         </div>
       </div>
+
+      {/* Create-login modal */}
+      {showLoginModal && (
+        <div className="fixed inset-0 z-10 overflow-y-auto">
+          <div className="flex items-center justify-center h-screen">
+            <div className="bg-white rounded-lg shadow-lg p-6 max-w-md w-full">
+              <h2 className="text-2xl font-bold mb-4">Create Login</h2>
+              <form onSubmit={handleCreateLogin}>
+                <Input
+                  type="email"
+                  placeholder="Email"
+                  value={loginEmail}
+                  onChange={(e) => setLoginEmail(e.target.value)}
+                  className="mb-4"
+                />
+                <Input
+                  type="password"
+                  placeholder="Password"
+                  value={loginPassword}
+                  onChange={(e) => setLoginPassword(e.target.value)}
+                  className="mb-4"
+                />
+                {loginError && <p className="text-red-500 mb-4">{loginError}</p>}
+                {loginSuccess && <p className="text-green-500 mb-4">Login created successfully</p>}
+                <Button
+                  variant="primary"
+                  type="submit"
+                  disabled={creatingLogin}
+                >
+                  {creatingLogin ? 'Creating...' : 'Create Login'}
+                </Button>
+              </form>
+              <Button
+                variant="secondary"
+                className="mt-4"
+                onClick={() => setShowLoginModal(false)}
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

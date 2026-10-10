@@ -9,3 +9,6 @@ export { default as loanService } from './loanService';
 export { default as paymentService } from './paymentService';
 export { reportService } from './reportService';
 export { tenantService } from './tenantService';
+export { default as portalService } from './portalService';
+export { default as notificationService } from './notificationService';
+export { default as deviceService } from './deviceService';

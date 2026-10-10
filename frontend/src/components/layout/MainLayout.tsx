@@ -14,7 +14,7 @@ import { logger } from '@/utils/logger';
 const layoutLogger = logger.scope('MainLayout');
 
 export function MainLayout() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, user } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   layoutLogger.debug('MainLayout render', { isAuthenticated, isLoading, sidebarOpen });
@@ -29,6 +29,13 @@ export function MainLayout() {
   if (!isAuthenticated) {
     layoutLogger.info('User not authenticated, redirecting to login');
     return <Navigate to="/login" replace />;
+  }
+
+  // Borrowers land on the self-service portal, not the staff dashboard
+  if (user?.role === 'BORROWER' && !window.location.pathname.startsWith('/portal')
+      && window.location.pathname !== '/notifications'
+      && window.location.pathname !== '/settings') {
+    return <Navigate to="/portal" replace />;
   }
 
   return (

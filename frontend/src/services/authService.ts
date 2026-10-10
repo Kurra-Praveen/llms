@@ -4,7 +4,7 @@
 
 import api, { clearAuth } from './api';
 import { logger } from '@/utils/logger';
-import type { ApiResponse, AuthResponse, LoginRequest, User } from '@/types';
+import type { ApiResponse, AuthResponse, CreateUserRequest, LoginRequest, User } from '@/types';
 
 const authLogger = logger.scope('AuthService');
 
@@ -123,6 +123,23 @@ export const authService = {
       authLogger.warn('Failed to parse stored user', { error });
     }
     return null;
+  },
+
+  /**
+   * Create a user account (staff use: provision a borrower login).
+   * Requires LENDER_ADMIN role on the backend.
+   */
+  async createUserAccount(request: CreateUserRequest): Promise<User> {
+    authLogger.info('Creating user account', { email: request.email, role: request.role });
+
+    const response = await api.post<ApiResponse<User>>('/v1/auth/users', request);
+
+    if (response.data.success) {
+      authLogger.info('User account created', { userId: response.data.data.id });
+      return response.data.data;
+    }
+
+    throw new Error(response.data.message || 'Failed to create user account');
   },
 };
 

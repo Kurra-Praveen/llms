@@ -10,8 +10,10 @@ import {
   ArrowRightOnRectangleIcon,
   Cog6ToothIcon,
 } from '@heroicons/react/24/outline';
+import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { notificationService } from '@/services';
 import { logger } from '@/utils/logger';
 
 const headerLogger = logger.scope('Header');
@@ -23,6 +25,14 @@ interface HeaderProps {
 export function Header({ onMenuClick }: HeaderProps) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+
+  // Poll unread notification count every 30s for the badge
+  const { data: unreadCount } = useQuery({
+    queryKey: ['notifications', 'unread-count'],
+    queryFn: () => notificationService.getUnreadCount(),
+    refetchInterval: 30_000,
+    retry: false,
+  });
 
   const handleLogout = async () => {
     headerLogger.info('Logout clicked');
@@ -53,12 +63,16 @@ export function Header({ onMenuClick }: HeaderProps) {
       <div className="flex items-center gap-2">
         {/* Notifications */}
         <button
-          onClick={() => headerLogger.debug('Notifications clicked')}
+          onClick={() => navigate('/notifications')}
           className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg relative"
+          aria-label="Notifications"
         >
           <BellIcon className="h-6 w-6" />
-          {/* Notification badge */}
-          <span className="absolute top-1 right-1 h-2 w-2 bg-red-500 rounded-full" />
+          {(unreadCount ?? 0) > 0 && (
+            <span className="absolute -top-0.5 -right-0.5 min-w-[1.25rem] h-5 px-1 bg-red-500 text-white text-xs font-medium rounded-full flex items-center justify-center">
+              {unreadCount! > 99 ? '99+' : unreadCount}
+            </span>
+          )}
         </button>
 
         {/* User menu */}
