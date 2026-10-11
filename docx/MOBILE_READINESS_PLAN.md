@@ -105,16 +105,38 @@ React web (staff)          Future Android app (borrower)
 
 ---
 
-## 5. Roadmap (post-P0/P1)
+## 5. Roadmap — RESTRUCTURED 2026-10-10 (functional parity first, push last)
 
-| Phase | Scope | Milestone |
-|-------|-------|-----------|
-| **1 — Monorepo + shared package** (1–2 wks) | npm workspaces; `packages/shared` (types, zod, API client w/ storage adapter, EMI calc); refactor `frontend/` onto it; Expo skeleton with login | Web app runs on shared package; mobile login + silent refresh on device |
-| **2 — MVP screens** (3–5 wks) | Home (active loans, next EMI), my loans, loan details + schedule, payment history, notification center, profile; i18n scaffolding | Internal dogfood APK |
-| **3 — Native features & payments** (2–4 wks) | Push E2E, biometric unlock, offline cache, Razorpay/UPI (flag), optional KYC camera upload | Feature-complete internal build |
-| **4 — Release & ops** (1–2 wks) | EAS Build production APK, internal distribution, GitHub Actions CI, Sentry, backend monitoring | v1.0 pilot rollout |
+> **Guiding principle (user decision):** The mobile app must function like the working web frontend — a functional prototype borrowers can actually use. Push notifications (Firebase project + extra setup) are deferred to the end. Core functionality > native bells & whistles.
 
-**Target structure:** root npm workspaces → `frontend/` (existing), `mobile/` (new Expo app), `packages/shared/` (types/validations/api/utils), `loan-platform/` (backend, unchanged), `docx/` (docs).
+### ✅ Completed
+- **Backend P0+P1** — portal API, provisioning, FCM service (dormant), rate limiting, token rotation, isolation tests. 127/127 green.
+- **Web frontend** — borrower portal, role routing, notification center, staff "Create Login".
+- **Mobile MVP** — Expo app live on device: login → Home → Loans → Loan Details → Payments → Profile. Auth + auto-refresh + SecureStore working.
+
+### 🔄 Remaining — reordered by "make it function like the frontend"
+
+| # | Feature | Why (parity gap) | Effort | Status |
+|---|---------|------------------|--------|--------|
+| 1 | **Notifications screen** | Web has a notification center + unread badge; mobile has none. Backend API + service already exist — just needs a mobile screen (bell icon + list + mark-read). | S | ⬜ |
+| 2 | **Pull-to-refresh + loading/empty/error states everywhere** | Web handles these; mobile needs consistent UX on all screens. | S | ⬜ |
+| 3 | **Offline tolerance** (TanStack Query persistence) | App should show cached data on flaky networks instead of blank screens. | S–M | ⬜ |
+| 4 | **Biometric unlock** (`expo-local-authentication`) | Fingerprint/face unlock instead of re-login — expected on mobile. | S | ⬜ |
+| 5 | **Form validation polish** (zod schemas shared with web) | Reuse the web's validation rules for any future input screens. | S | ⬜ |
+| 6 | **EAS Build APK** (internal distribution) | Installable APK — no Expo Go needed for testers/pilot borrowers. | S | ⬜ |
+| 7 | **Monorepo shared package** (`packages/shared`) | Eliminate type/API duplication between `frontend/` and `mobile/`. (Deferred — types currently duplicated in `mobile/lib/types.ts`.) | M | ⬜ |
+| 8 | **i18n scaffolding** | Regional languages for borrowers (English first). | M | ⬜ |
+| 9 | **Push notifications (FCM E2E)** | Firebase project + `google-services.json` + device registration + real delivery. Backend service is built but dormant (`FIREBASE_ENABLED=false`). **Intentionally last** — needs external Firebase setup. | M | ⬜ |
+| 10 | **Payment gateway (Razorpay/UPI)** | In-app self-payment. Behind feature flag. (P2 — product decision.) | M–L | ⬜ |
+| 11 | **KYC document upload** | Camera + S3/MinIO. (P2 — product decision.) | M | ⬜ |
+
+### Milestones
+- **M1 — Functional parity** (items 1–4): mobile app matches the web portal's core functionality. *Target: next session.*
+- **M2 — Distributable prototype** (items 5–6): installable APK for internal testing.
+- **M3 — Production hardening** (items 7–8): shared package, i18n.
+- **M4 — Native features** (items 9–11): push, payments, KYC.
+
+**Target structure (deferred to M3):** root npm workspaces → `frontend/`, `mobile/`, `packages/shared/`, `loan-platform/`, `docx/`.
 
 ---
 
@@ -146,4 +168,5 @@ React web (staff)          Future Android app (borrower)
 |------|--------|
 | 2026-10-10 | Document created. Backend-first execution approved. P0 #1 started. |
 | 2026-10-10 | **P0 (all 5) + P1 (all 3) completed and test-verified.** New: `portal/` module (7 endpoints), notification center API, device registration, FCM push service, V11+V12 migrations, rate limiting, token reuse detection, 12 isolation tests. `mvn test`: 127/127 green. **Backend is mobile-ready.** |
-| 2026-10-10 | **Frontend updated for borrower portal.** New: `portalService`/`notificationService`/`deviceService`, 5 portal pages (`/portal`, `/portal/loans`, `/portal/loans/:id`, `/portal/payments`, `/notifications`), role-based routing (BORROWER → portal, staff → dashboard), live unread-count badge in Header, staff "Create Login" modal on borrower details. `borrowerId` added to `User` type. New files are TS-clean and ESLint-clean (33 pre-existing form errors unchanged). **Web app now supports borrower self-service.** Next: Phase 1 — monorepo + shared package + Expo skeleton. |
+| 2026-10-10 | **Frontend updated for borrower portal.** New: `portalService`/`notificationService`/`deviceService`, 5 portal pages (`/portal`, `/portal/loans`, `/portal/loans/:id`, `/portal/payments`, `/notifications`), role-based routing (BORROWER → portal, staff → dashboard), live unread-count badge in Header, staff "Create Login" modal on borrower details. `borrowerId` added to `User` type. New files are TS-clean and ESLint-clean (33 pre-existing form errors unchanged). **Web app now supports borrower self-service.** |
+| 2026-10-10 | **🎉 MOBILE MVP LIVE ON DEVICE.** Expo SDK 57 app in `mobile/` — Expo Router (file-based), TanStack Query, Axios with auto-refresh on 401, SecureStore (Keystore-backed) token storage, auth gate. Screens: login, Home (summary + next EMI), My Loans, Loan Details + schedule, Payments, Profile (logout). API client points to LAN IP `192.168.31.210:4044`. **Verified: borrower login on physical Android 16 device via Expo Go → navigates to Home with live data.** TypeScript compiles clean. |
