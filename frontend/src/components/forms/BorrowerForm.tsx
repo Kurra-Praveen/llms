@@ -19,6 +19,7 @@ interface BorrowerFormProps {
 export function BorrowerForm({ initialData, isEdit = false }: BorrowerFormProps) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const [submitError, setSubmitError] = React.useState<string | null>(null);
 
   const {
     register,
@@ -63,13 +64,16 @@ export function BorrowerForm({ initialData, isEdit = false }: BorrowerFormProps)
       }
       navigate('/borrowers');
     },
-    onError: (error) => {
+    onError: (error: any) => {
       formLogger.error('Failed to save borrower', { error });
-      // TODO: Show toast notification
+      setSubmitError(
+        error.response?.data?.message || error.message || 'Failed to save borrower'
+      );
     },
   });
 
   const onSubmit = (data: BorrowerFormData) => {
+    setSubmitError(null);
     formLogger.debug('Form submitted', { data });
     mutation.mutate(data);
   };
@@ -246,6 +250,10 @@ export function BorrowerForm({ initialData, isEdit = false }: BorrowerFormProps)
             />
           </div>
         </div>
+
+        {submitError && (
+          <p className="mt-4 text-sm text-red-600">{submitError}</p>
+        )}
 
         <div className="mt-6 flex items-center justify-end gap-3">
           <Button

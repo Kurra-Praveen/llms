@@ -3,10 +3,12 @@
  * Pushed on top of the tabs when a loan card is tapped.
  */
 
-import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
 import { useLocalSearchParams, Stack } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { portalApi } from '@/lib/portalApi';
+import { ErrorState } from '@/lib/components/ErrorState';
+import { useQueryState } from '@/lib/hooks/useQueryState';
 
 const inr = (n?: number) =>
   `₹${(n ?? 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -14,36 +16,45 @@ const inr = (n?: number) =>
 export default function LoanDetailsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
 
-  const { data: loan, isLoading: loanLoading } = useQuery({
+  const loanQuery = useQuery({
     queryKey: ['portal', 'loans', id],
     queryFn: () => portalApi.getLoan(id!),
     enabled: !!id,
   });
 
-  const { data: schedule } = useQuery({
+  const scheduleQuery = useQuery({
     queryKey: ['portal', 'loans', id, 'schedule'],
     queryFn: () => portalApi.getSchedule(id!),
     enabled: !!id,
   });
 
-  if (loanLoading) {
+  const loanState = useQueryState(loanQuery);
+
+  if (!loanState.isReady) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color="#2563eb" />
-      </View>
+      <ErrorState
+        variant={loanState.status}
+        message={loanState.status === 'error' ? 'Could not load this loan.' : undefined}
+        onRetry={loanState.refetch}
+      />
     );
   }
 
-  if (!loan) {
-    return (
-      <View style={styles.center}>
-        <Text style={styles.empty}>Loan not found</Text>
-      </View>
-    );
-  }
+  const loan = loanState.data;
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView
+      style={styles.container}
+      refreshControl={
+        <RefreshControl
+          refreshing={loanState.isRefetching}
+          onRefresh={() => {
+            loanQuery.refetch();
+            scheduleQuery.refetch();
+          }}
+        />
+      }
+    >
       <Stack.Screen options={{ title: loan.loanNumber, headerShown: true }} />
 
       <View style={styles.card}>
@@ -60,22 +71,37 @@ export default function LoanDetailsScreen() {
 
       <View style={styles.card}>
         <Text style={styles.sectionTitle}>Repayment Schedule</Text>
-        {(schedule ?? []).map((entry) => (
-          <View
-            key={entry.id}
-            style={[styles.scheduleRow, entry.status === 'OVERDUE' && styles.overdueRow]}
-          >
-            <Text style={styles.scheduleNum}>#{entry.installmentNumber}</Text>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.scheduleDate}>{entry.dueDate}</Text>
-              <Text style={styles.scheduleStatus}>{entry.status}</Text>
-            </View>
-            <View style={{ alignItems: 'flex-end' }}>
-              <Text style={styles.scheduleAmount}>{inr(entry.installmentAmount)}</Text>
-              <Text style={styles.schedulePaid}>Paid: {inr(entry.totalPaid)}</Text>
-            </View>
+        {scheduleQuery.status === 'error' && (
+          <View style={styles.scheduleError}>
+            <Text style={styles.scheduleErrorText}>Schedule failed to load.</Text>
+            <TouchableOpacity onPress={() => scheduleQuery.refetch()}>
+              <Text style={styles.retryLink}>Retry</Text>
+            </TouchableOpacity>
           </View>
-        ))}
+        )}
+        {scheduleQuery.status !== 'error' && (
+          <>
+            {(scheduleQuery.data ?? []).map((entry) => (
+              <View
+                key={entry.id}
+                style={[styles.scheduleRow, entry.status === 'OVERDUE' && styles.overdueRow]}
+              >
+                <Text style={styles.scheduleNum}>#{entry.installmentNumber}</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.scheduleDate}>{entry.dueDate}</Text>
+                  <Text style={styles.scheduleStatus}>{entry.status}</Text>
+                </View>
+                <View style={{ alignItems: 'flex-end' }}>
+                  <Text style={styles.scheduleAmount}>{inr(entry.installmentAmount)}</Text>
+                  <Text style={styles.schedulePaid}>Paid: {inr(entry.totalPaid)}</Text>
+                </View>
+              </View>
+            ))}
+            {(scheduleQuery.data ?? []).length === 0 && (
+              <Text style={styles.empty}>No schedule entries yet.</Text>
+            )}
+          </>
+        )}
       </View>
     </ScrollView>
   );
@@ -100,8 +126,6 @@ function Row({
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f3f4f6', padding: 16 },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  empty: { color: '#6b7280', fontSize: 16 },
   card: {
     backgroundColor: '#fff',
     borderRadius: 14,
@@ -130,4 +154,8 @@ const styles = StyleSheet.create({
   scheduleStatus: { fontSize: 11, color: '#6b7280' },
   scheduleAmount: { fontSize: 14, fontWeight: '700', color: '#111827' },
   schedulePaid: { fontSize: 11, color: '#059669' },
+  scheduleError: { paddingVertical: 12, alignItems: 'center' },
+  scheduleErrorText: { color: '#b91c1c', fontSize: 13, marginBottom: 6 },
+  retryLink: { color: '#2563eb', fontSize: 13, fontWeight: '600' },
+  empty: { textAlign: 'center', color: '#6b7280', paddingVertical: 16 },
 });

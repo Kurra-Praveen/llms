@@ -2,10 +2,12 @@
  * My Loans tab — list of the borrower's loans.
  */
 
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { portalApi } from '@/lib/portalApi';
+import { ErrorState } from '@/lib/components/ErrorState';
+import { useQueryState } from '@/lib/hooks/useQueryState';
 import type { Loan } from '@/lib/types';
 
 const inr = (n?: number) =>
@@ -22,20 +24,23 @@ const statusColor: Record<string, string> = {
 export default function LoansScreen() {
   const router = useRouter();
 
-  const { data, isLoading } = useQuery({
+  const query = useQuery({
     queryKey: ['portal', 'loans'],
     queryFn: () => portalApi.getLoans(),
   });
+  const state = useQueryState(query);
 
-  if (isLoading) {
+  if (!state.isReady) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color="#2563eb" />
-      </View>
+      <ErrorState
+        variant={state.status}
+        message={state.status === 'error' ? 'Could not load your loans.' : undefined}
+        onRetry={state.refetch}
+      />
     );
   }
 
-  const loans = data?.content ?? [];
+  const loans = state.data.content;
 
   return (
     <View style={styles.container}>
@@ -43,9 +48,10 @@ export default function LoansScreen() {
         data={loans}
         keyExtractor={(item) => item.id}
         contentContainerStyle={{ padding: 16 }}
-        ListEmptyComponent={
-          <Text style={styles.empty}>You don't have any loans yet.</Text>
+        refreshControl={
+          <RefreshControl refreshing={state.isRefetching} onRefresh={state.refetch} />
         }
+        ListEmptyComponent={<Text style={styles.empty}>You do not have any loans yet.</Text>}
         renderItem={({ item }: { item: Loan }) => (
           <TouchableOpacity
             style={styles.card}
@@ -89,7 +95,6 @@ export default function LoansScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f3f4f6' },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   empty: { textAlign: 'center', color: '#6b7280', marginTop: 40 },
   card: {
     backgroundColor: '#fff',

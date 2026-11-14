@@ -3,10 +3,12 @@
  * Pushed as a modal from the bell icon on the Home tab.
  */
 
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl } from 'react-native';
 import { Stack } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { notificationApi } from '@/lib/portalApi';
+import { ErrorState } from '@/lib/components/ErrorState';
+import { useQueryState } from '@/lib/hooks/useQueryState';
 import type { AppNotification } from '@/lib/types';
 
 function timeAgo(iso: string): string {
@@ -24,10 +26,11 @@ function timeAgo(iso: string): string {
 export default function NotificationsScreen() {
   const queryClient = useQueryClient();
 
-  const { data, isLoading } = useQuery({
+  const query = useQuery({
     queryKey: ['notifications'],
     queryFn: () => notificationApi.getAll(),
   });
+  const state = useQueryState(query);
 
   const markRead = useMutation({
     mutationFn: (id: string) => notificationApi.markAsRead(id),
@@ -37,28 +40,36 @@ export default function NotificationsScreen() {
     },
   });
 
-  const notifications = data?.content ?? [];
+  if (!state.isReady) {
+    return (
+      <ErrorState
+        variant={state.status}
+        message={state.status === 'error' ? 'Could not load notifications.' : undefined}
+        onRetry={state.refetch}
+      />
+    );
+  }
+
+  const notifications = state.data.content;
 
   return (
     <View style={styles.container}>
       <Stack.Screen options={{ title: 'Notifications', headerShown: true }} />
 
-      {isLoading ? (
-        <View style={styles.center}>
-          <ActivityIndicator size="large" color="#2563eb" />
-        </View>
-      ) : (
-        <FlatList
-          data={notifications}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={{ padding: 16 }}
-          ListEmptyComponent={
-            <View style={styles.center}>
-              <Text style={styles.emptyIcon}>🔔</Text>
-              <Text style={styles.empty}>No notifications yet.</Text>
-            </View>
-          }
-          renderItem={({ item }: { item: AppNotification }) => {
+      <FlatList
+        data={notifications}
+        keyExtractor={(item) => item.id}
+        contentContainerStyle={{ padding: 16 }}
+        refreshControl={
+          <RefreshControl refreshing={state.isRefetching} onRefresh={state.refetch} />
+        }
+        ListEmptyComponent={
+          <View style={styles.center}>
+            <Text style={styles.emptyIcon}>🔔</Text>
+            <Text style={styles.empty}>No notifications yet.</Text>
+          </View>
+        }
+        renderItem={({ item }: { item: AppNotification }) => {
             const isUnread = !item.readAt;
             return (
               <TouchableOpacity
@@ -84,7 +95,6 @@ export default function NotificationsScreen() {
             );
           }}
         />
-      )}
     </View>
   );
 }

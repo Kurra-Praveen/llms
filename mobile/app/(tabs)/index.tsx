@@ -2,11 +2,13 @@
  * Home tab — summary: active loans, total outstanding, next EMI.
  */
 
-import { View, Text, StyleSheet, ScrollView, RefreshControl, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, RefreshControl, TouchableOpacity } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { portalApi, notificationApi } from '@/lib/portalApi';
 import { useAuth } from '@/lib/auth';
+import { ErrorState } from '@/lib/components/ErrorState';
+import { useQueryState } from '@/lib/hooks/useQueryState';
 
 const inr = (n?: number) =>
   `₹${(n ?? 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -15,33 +17,36 @@ export default function HomeScreen() {
   const { user } = useAuth();
   const router = useRouter();
 
-  const { data: summary, isLoading, refetch, isRefetching } = useQuery({
+  const summaryQuery = useQuery({
     queryKey: ['portal', 'summary'],
     queryFn: portalApi.getSummary,
   });
 
   // Poll unread notification count for the header bell badge
-  const { data: unreadCount } = useQuery({
+  const unreadQuery = useQuery({
     queryKey: ['notifications', 'unread-count'],
     queryFn: notificationApi.getUnreadCount,
     refetchInterval: 30_000,
     retry: false,
   });
 
-  if (isLoading) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color="#2563eb" />
-      </View>
-    );
+  const state = useQueryState(summaryQuery);
+  const unreadCount = unreadQuery.data ?? 0;
+
+  if (state.status === 'loading') {
+    return <ErrorState variant="loading" />;
+  }
+  if (state.status === 'error') {
+    return <ErrorState variant="error" message="Could not load your summary." onRetry={state.refetch} />;
   }
 
-  const nextEmi = summary?.nextEmi;
+  const summary = state.data!;
+  const nextEmi = summary.nextEmi;
 
   return (
     <ScrollView
       style={styles.container}
-      refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} />}
+      refreshControl={<RefreshControl refreshing={state.isRefetching} onRefresh={state.refetch} />}
     >
       <View style={styles.headerRow}>
         <Text style={styles.greeting}>Welcome back, {user?.firstName}!</Text>
@@ -51,11 +56,9 @@ export default function HomeScreen() {
           accessibilityLabel="Notifications"
         >
           <Text style={styles.bellIcon}>🔔</Text>
-          {(unreadCount ?? 0) > 0 && (
+          {unreadCount > 0 && (
             <View style={styles.badge}>
-              <Text style={styles.badgeText}>
-                {unreadCount! > 99 ? '99+' : unreadCount}
-              </Text>
+              <Text style={styles.badgeText}>{unreadCount > 99 ? '99+' : unreadCount}</Text>
             </View>
           )}
         </TouchableOpacity>
@@ -64,11 +67,11 @@ export default function HomeScreen() {
       <View style={styles.row}>
         <View style={[styles.card, styles.half]}>
           <Text style={styles.cardLabel}>Active Loans</Text>
-          <Text style={styles.cardValue}>{summary?.activeLoansCount ?? 0}</Text>
+          <Text style={styles.cardValue}>{summary.activeLoansCount ?? 0}</Text>
         </View>
         <View style={[styles.card, styles.half]}>
           <Text style={styles.cardLabel}>Total Outstanding</Text>
-          <Text style={styles.cardValue}>{inr(summary?.totalOutstanding)}</Text>
+          <Text style={styles.cardValue}>{inr(summary.totalOutstanding)}</Text>
         </View>
       </View>
 
@@ -97,19 +100,8 @@ export default function HomeScreen() {
             )}
           </>
         ) : (
-          <Text style={styles.allClear}>You're all caught up! 🎉</Text>
+          <Text style={styles.allClear}>You are all caught up! 🎉</Text>
         )}
-      </View>
-
-      <View style={styles.headerBell}>
-        <TouchableOpacity
-          onPress={() => router.push('/notifications')}
-          style={styles.bellButton}
-        >
-          <View style={styles.bellIcon}>
-            <Text style={styles.bellText}>{unreadCount}</Text>
-          </View>
-        </TouchableOpacity>
       </View>
     </ScrollView>
   );
@@ -117,7 +109,6 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f3f4f6', padding: 16 },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -170,16 +161,4 @@ const styles = StyleSheet.create({
   },
   overdueText: { color: '#b91c1c', fontSize: 13 },
   allClear: { fontSize: 14, color: '#059669' },
-  headerBell: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
-  bellButton: { backgroundColor: '#f5f5f5', borderRadius: 10, padding: 10 },
-  bellIcon: { backgroundColor: '#f5f5f5', borderRadius: 10, padding: 10 },
-  bellText: { color: '#2563eb', fontSize: 14 },
-  bell: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  badge: {
-    backgroundColor: '#f5f5f5',
-    borderRadius: 10,
-    padding: 10,
-    alignItems: 'center',
-  },
-  badgeText: { color: '#2563eb', fontSize: 14 },
 });
